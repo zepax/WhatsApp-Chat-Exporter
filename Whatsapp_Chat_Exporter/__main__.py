@@ -142,7 +142,7 @@ def main():
                           "Possibly incorrect offsets used in decryption.")
                     exit(4)
                 else:
-                    print("Unknown error occurred.")
+                    print("Unknown error occurred.", error)
                     exit(5)
         if options.wa is None:
             contact_db = "wa.db"
@@ -156,6 +156,7 @@ def main():
 
         if os.path.isfile(contact_db):
             with sqlite3.connect(contact_db) as db:
+                db.row_factory = sqlite3.Row
                 contacts(db, data)
 
     elif options.iphone:
@@ -181,6 +182,7 @@ def main():
 
     if os.path.isfile(msg_db):
         with sqlite3.connect(msg_db) as db:
+            db.row_factory = sqlite3.Row
             messages(db, data)
             media(db, data, options.media)
             vcard(db, data)
