@@ -216,7 +216,7 @@ def main():
             messages(db, data)
             media(db, data, args.media)
             vcard(db, data)
-        # create_html(data, options.output, options.template, options.embedded)
+        create_html(data, options.output, options.template, options.embedded)
     else:
         print(
             "The message database does not exist. You may specify the path "
