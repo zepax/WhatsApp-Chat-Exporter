@@ -98,7 +98,7 @@ wtsexporter -i -b "C:\Users\[Username]\AppData\Roaming\Apple Computer\MobileSync
 ```
 #### Mac
 ```sh
-wtsexporter -i -b "~/Library/Application Support/MobileSync/Backup/[device id]"
+wtsexporter -i -b ~/Library/Application\ Support/MobileSync/Backup/[device id]
 ```
 
 ## Results
