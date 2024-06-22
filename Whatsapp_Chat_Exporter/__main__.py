@@ -275,18 +275,12 @@ def main():
         help="Create a copy of the media seperated per chat in <MEDIA>/separated/ directory"
     )
     parser.add_argument(
-        "--enrich-from-vcards",
-        dest="enrich_from_vcards",
-        default=None,
-        help="Path to an exported vcf file from Google contacts export. Add names missing from WhatsApp's default database"
+        "--decrypt-chunk-size",
+        dest="decrypt_chunk_size",
+        default=1 * 1024 * 1024,
+        type=int,
+        help="Specify the chunk size for decrypting iOS backup, which may affect the decryption speed."
     )
-    parser.add_argument(
-        "--default-country-code",
-        dest="default_contry_code",
-        default=None,
-        help="Use with --enrich-from-vcards. When numbers in the vcf file does not have a country code, this will be used. 1 is for US, 66 for Thailand etc. Most likely use the number of your own country"
-    )
-    
     args = parser.parse_args()
 
     # Check for updates
@@ -450,7 +444,7 @@ def main():
             args.media = identifiers.DOMAIN
         if args.backup is not None:
             if not os.path.isdir(args.media):
-                ios_media_handler.extract_media(args.backup, identifiers)
+                ios_media_handler.extract_media(args.backup, identifiers, args.decrypt_chunk_size)
             else:
                 print("WhatsApp directory already exists, skipping WhatsApp file extraction.")
         if args.db is None:
