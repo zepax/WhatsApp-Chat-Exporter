@@ -3,8 +3,13 @@
 import os
 from datetime import datetime
 from mimetypes import MimeTypes
+from typing import Tuple
+
 from Whatsapp_Chat_Exporter.data_model import ChatStore, Message
 from Whatsapp_Chat_Exporter.utility import Device
+
+# Reuse a single MimeTypes instance to avoid repeated initialisation
+MIME = MimeTypes()
 
 
 def messages(path, data, assume_first_as_me=False):
@@ -24,15 +29,13 @@ def messages(path, data, assume_first_as_me=False):
     you = ""  # Will store the username of the current user
     user_identification_done = False  # Flag to track if user identification has been done
     
-    # First pass: count total lines for progress reporting
+    # Process the file while also counting the total lines for progress
     with open(path, "r", encoding="utf8") as file:
         total_row_number = sum(1 for _ in file)
-    
-    # Second pass: process the messages
-    with open(path, "r", encoding="utf8") as file:
+        file.seek(0)
         for index, line in enumerate(file):
             you, user_identification_done = process_line(
-                line, index, chat, path, you, 
+                line, index, chat, path, you,
                 assume_first_as_me, user_identification_done
             )
 
@@ -137,8 +140,7 @@ def process_message_content(msg, message, file_path):
 
 
 def process_attached_file(msg, message, file_path):
-    """Process an attached file in a message"""
-    mime = MimeTypes()
+    """Process an attached file in a message."""
     msg.media = True
     
     # Extract file path and check if it exists
@@ -147,7 +149,7 @@ def process_attached_file(msg, message, file_path):
     
     if os.path.isfile(attached_file_path):
         msg.data = attached_file_path
-        guess = mime.guess_type(attached_file_path)[0]
+        guess = MIME.guess_type(attached_file_path)[0]
         msg.mime = guess if guess is not None else "application/octet-stream"
     else:
         msg.data = "The media is missing"
@@ -159,7 +161,8 @@ def process_message_continuation(line, index, chat):
     """Process a line that continues a previous message"""
     # Find the previous message
     lookback = index - 1
-    while lookback not in chat.keys():
+    keys = chat.keys()
+    while lookback not in keys:
         lookback -= 1
     
     msg = chat.get_message(lookback)
@@ -174,8 +177,8 @@ def process_message_continuation(line, index, chat):
 def prompt_for_user_identification(name):
     """Ask the user if the given name is their username"""
     while True:
-        ans = input(f"Is '{name}' you? (Y/N)").lower()
+        ans = input(f"Is '{name}' you? (Y/N) ").strip().lower()
         if ans == "y":
             return name
-        elif ans == "n":
+        if ans == "n":
             return ""
