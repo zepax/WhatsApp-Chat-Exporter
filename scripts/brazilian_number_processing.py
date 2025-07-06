@@ -1,76 +1,57 @@
 """
-This script processes a VCARD file to standardize telephone entries and add a second TEL line with the modified number (removing the extra ninth digit) for contacts with 9-digit subscribers.
-It handles numbers that may already include a "+55" prefix and ensures that the output format is consistent.
-Contributed by @magpires https://github.com/KnugiHK/WhatsApp-Chat-Exporter/issues/127#issuecomment-2646660625
+Utility functions to normalise and format telephone numbers found in VCARD
+files.  Originally tailored for Brazilian numbers, the implementation now relies
+on the :mod:`phonenumbers` package so it works for phone numbers from any
+country.  For Brazilian mobile numbers an additional entry is added without the
+extra ninth digit.
+
+Contributed by @magpires
 """
 import re
 import argparse
+from typing import Optional, Tuple
 
-def process_phone_number(raw_phone):
+import phonenumbers
+from phonenumbers import PhoneNumber, PhoneNumberFormat
+
+def process_phone_number(raw_phone: str, default_region: str = "BR") -> Tuple[Optional[str], Optional[str]]:
+    """Return international phone number formats.
+
+    The function returns a tuple ``(original, modified)``. ``original`` is the
+    international representation of ``raw_phone``. ``modified`` is only
+    populated for Brazilian mobile numbers where the additional ninth digit is
+    removed.  Both values are ``None`` if the number cannot be parsed.
     """
-    Process the raw phone string from the VCARD and return two formatted numbers:
-      - The original formatted number, and
-      - A modified formatted number with the extra (ninth) digit removed, if applicable.
-      
-    Desired output:
-      For a number with a 9-digit subscriber:
-         Original: "+55 {area} {first 5 of subscriber}-{last 4 of subscriber}"
-         Modified: "+55 {area} {subscriber[1:5]}-{subscriber[5:]}" 
-      For example, for an input that should represent "027912345678", the outputs are:
-         "+55 27 91234-5678"  and  "+55 27 1234-5678"
-    
-    This function handles numbers that may already include a "+55" prefix.
-    It expects that after cleaning, a valid number (without the country code) should have either 10 digits 
-    (2 for area + 8 for subscriber) or 11 digits (2 for area + 9 for subscriber).
-    If extra digits are present, it takes the last 11 (or 10) digits.
-    """
-    # Store the original input for processing
-    number_to_process = raw_phone.strip()
-    
-    # Remove all non-digit characters
-    digits = re.sub(r'\D', '', number_to_process)
-    
-    # If the number starts with '55', remove it for processing
-    if digits.startswith("55") and len(digits) > 11:
-        digits = digits[2:]
-    
-    # Remove trunk zero if present
-    if digits.startswith("0"):
-        digits = digits[1:]
-    
-    # After cleaning, we expect a valid number to have either 10 or 11 digits
-    # If there are extra digits, use the last 11 (for a 9-digit subscriber) or last 10 (for an 8-digit subscriber)
-    if len(digits) > 11:
-        # Here, we assume the valid number is the last 11 digits
-        digits = digits[-11:]
-    elif len(digits) > 10 and len(digits) < 11:
-        # In some cases with an 8-digit subscriber, take the last 10 digits
-        digits = digits[-10:]
-    
-    # Check if we have a valid number after processing
-    if len(digits) not in (10, 11):
+
+    try:
+        parsed: PhoneNumber = phonenumbers.parse(raw_phone, default_region)
+    except phonenumbers.NumberParseException:
         return None, None
 
-    area = digits[:2]
-    subscriber = digits[2:]
-
-    if len(subscriber) == 9:
-        # Format the original number (5-4 split, e.g., "91234-5678")
-        orig_subscriber = f"{subscriber[:5]}-{subscriber[5:]}"
-        # Create a modified version: drop the first digit of the subscriber to form an 8-digit subscriber (4-4 split)
-        mod_subscriber = f"{subscriber[1:5]}-{subscriber[5:]}"
-        original_formatted = f"+55 {area} {orig_subscriber}"
-        modified_formatted = f"+55 {area} {mod_subscriber}"
-    elif len(subscriber) == 8:
-        original_formatted = f"+55 {area} {subscriber[:4]}-{subscriber[4:]}"
-        modified_formatted = None
-    else:
-        # This shouldn't happen given the earlier check, but just to be safe
+    if not (phonenumbers.is_possible_number(parsed) and phonenumbers.is_valid_number(parsed)):
         return None, None
+
+    original_formatted = phonenumbers.format_number(parsed, PhoneNumberFormat.INTERNATIONAL)
+
+    modified_formatted: Optional[str] = None
+
+    if phonenumbers.region_code_for_number(parsed) == "BR":
+        digits = phonenumbers.national_significant_number(parsed)
+        area = digits[:2]
+        subscriber = digits[2:]
+
+        # phonenumbers does not insert a hyphen for landline numbers, add one for consistency
+        if len(subscriber) == 8:
+            original_formatted = f"+55 {area} {subscriber[:4]}-{subscriber[4:]}"
+        elif len(subscriber) == 9:
+            original_formatted = f"+55 {area} {subscriber[:5]}-{subscriber[5:]}"
+            mod_digits = subscriber[1:]
+            mod_number = phonenumbers.parse(f"+55{area}{mod_digits}", "BR")
+            modified_formatted = f"+55 {area} {mod_digits[:4]}-{mod_digits[4:]}"
 
     return original_formatted, modified_formatted
 
-def process_vcard(input_vcard, output_vcard):
+def process_vcard(input_vcard: str, output_vcard: str, default_region: str = "BR") -> None:
     """
     Process a VCARD file to standardize telephone entries and add a second TEL line
     with the modified number (removing the extra ninth digit) for contacts with 9-digit subscribers.
@@ -89,7 +70,7 @@ def process_vcard(input_vcard, output_vcard):
         match = phone_pattern.match(stripped_line)
         if match:
             raw_phone = match.group("number").strip()
-            orig_formatted, mod_formatted = process_phone_number(raw_phone)
+            orig_formatted, mod_formatted = process_phone_number(raw_phone, default_region)
             if orig_formatted:
                 # Always output using the standardized prefix.
                 output_lines.append(f"TEL;TYPE=CELL:{orig_formatted}\n")
@@ -103,13 +84,21 @@ def process_vcard(input_vcard, output_vcard):
     with open(output_vcard, 'w', encoding='utf-8') as file:
         file.writelines(output_lines)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Process a VCARD file to standardize telephone entries and add a second TEL line with the modified number (removing the extra ninth digit) for contacts with 9-digit subscribers."
+        description=(
+            "Process a VCARD file to standardise telephone entries. For Brazilian "
+            "mobile numbers an extra TEL line without the ninth digit is added."
+        )
     )
-    parser.add_argument('input_vcard', type=str, help='Input VCARD file')
-    parser.add_argument('output_vcard', type=str, help='Output VCARD file')
+    parser.add_argument("input_vcard", type=str, help="Input VCARD file")
+    parser.add_argument("output_vcard", type=str, help="Output VCARD file")
+    parser.add_argument(
+        "--region",
+        default="BR",
+        help="Default region for numbers without country code (ISO 3166-1 alpha-2)",
+    )
     args = parser.parse_args()
-    
-    process_vcard(args.input_vcard, args.output_vcard)
+
+    process_vcard(args.input_vcard, args.output_vcard, args.region)
     print(f"VCARD processed and saved to {args.output_vcard}")
