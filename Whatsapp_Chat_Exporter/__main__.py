@@ -20,14 +20,13 @@ from getpass import getpass
 from sys import exit
 from typing import Tuple, Optional, List, Dict, Any, Union
 
-# Try to import vobject for contacts processing
-try:
-    import vobject
-except ModuleNotFoundError:
-    vcards_deps_installed = False
-else:
-    from Whatsapp_Chat_Exporter.vcards_contacts import ContactsFromVCards
+# Try to import vobject for contacts processing. The package is optional and only
+# required when enriching chats with external vCards.
+try:  # noqa: WPS300 - bare import intended
+    import vobject  # type: ignore  # imported for side effect checking
     vcards_deps_installed = True
+except ModuleNotFoundError:  # pragma: no cover - executed when optional dep missing
+    vcards_deps_installed = False
 
 
 def setup_argument_parser() -> ArgumentParser:
@@ -347,18 +346,22 @@ def process_single_date_filter(parser: ArgumentParser, args) -> None:
 
 def setup_contact_store(args) -> Optional['ContactsFromVCards']:
     """Set up and return a contact store if needed."""
-    if args.enrich_from_vcards is not None:
-        if not vcards_deps_installed:
-            print(
-                "You don't have the dependency to enrich contacts with vCard.\n"
-                "Read more on how to deal with enriching contacts:\n"
-                "https://github.com/KnugiHK/Whatsapp-Chat-Exporter/blob/main/README.md#usage"
-            )
-            exit(1)
-        contact_store = ContactsFromVCards()
-        contact_store.load_vcf_file(args.enrich_from_vcards, args.default_country_code)
-        return contact_store
-    return None
+    if args.enrich_from_vcards is None:
+        return None
+
+    if not vcards_deps_installed:
+        print(
+            "You don't have the dependency to enrich contacts with vCard.\n"
+            "Read more on how to deal with enriching contacts:\n"
+            "https://github.com/KnugiHK/Whatsapp-Chat-Exporter/blob/main/README.md#usage"
+        )
+        exit(1)
+
+    from Whatsapp_Chat_Exporter.vcards_contacts import ContactsFromVCards
+
+    contact_store = ContactsFromVCards()
+    contact_store.load_vcf_file(args.enrich_from_vcards, args.default_country_code)
+    return contact_store
 
 
 def decrypt_android_backup(args) -> int:

@@ -9,7 +9,9 @@ from Whatsapp_Chat_Exporter.utility import WhatsAppIdentifier
 from Whatsapp_Chat_Exporter.bplist import BPListReader
 try:
     from iphone_backup_decrypt import EncryptedBackup, RelativePath
-except ModuleNotFoundError:
+except ImportError:
+    EncryptedBackup = None
+    RelativePath = None
     support_encrypted = False
 else:
     support_encrypted = True

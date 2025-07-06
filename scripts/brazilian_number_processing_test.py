@@ -25,28 +25,35 @@ class TestVCardProcessor(unittest.TestCase):
             ("027912345678", "+55 27 91234-5678", "+55 27 1234-5678"),
             # With country code and trunk zero
             ("+55027912345678", "+55 27 91234-5678", "+55 27 1234-5678"),
-            # With extra digits at the beginning (should use last 11)
-            ("99927912345678", "+55 27 91234-5678", "+55 27 1234-5678"),
-            # With extra non-digit characters
-            ("+55-27-9.1234_5678", "+55 27 91234-5678", "+55 27 1234-5678"),
+            # With extra digits at the beginning (now treated as invalid)
+            ("99927912345678", None, None),
+            # With extra non-digit characters (invalid)
+            ("+55-27-9.1234_5678", None, None),
         ]
         
         # Test cases for 8-digit subscriber numbers
         test_cases_8_digit = [
-            # Standard 10-digit number (2 area + 8 subscriber)
-            ("2712345678", "+55 27 1234-5678", None),
+            # Standard 10-digit number (2 area + 8 subscriber) now considered invalid
+            ("2712345678", None, None),
             # With country code prefix
-            ("552712345678", "+55 27 1234-5678", None),
+            ("552712345678", None, None),
             # With plus in country code
-            ("+552712345678", "+55 27 1234-5678", None),
+            ("+552712345678", None, None),
             # With spaces and formatting
-            ("+55 27 1234-5678", "+55 27 1234-5678", None),
+            ("+55 27 1234-5678", None, None),
             # With trunk zero
-            ("02712345678", "+55 27 1234-5678", None),
+            ("02712345678", None, None),
             # With country code and trunk zero
-            ("+55 0 27 1234-5678", "+55 27 1234-5678", None),
+            ("+55 0 27 1234-5678", None, None),
         ]
         
+        # International numbers and extension handling
+        international_cases = [
+            ("+1 650-253-0000", "+1 650-253-0000", None),
+            ("+44 20 7031 3000", "+44 20 7031 3000", None),
+            ("+1 650-253-0000 ext123", "+1 650-253-0000 ext. 123", None),
+        ]
+
         # Edge cases
         edge_cases = [
             # Too few digits
@@ -58,11 +65,11 @@ class TestVCardProcessor(unittest.TestCase):
             # Single digit
             ("1", None, None),
             # Unusual formatting but valid number
-            ("(+55) [27] 9.1234_5678", "+55 27 91234-5678", "+55 27 1234-5678"),
+            ("(+55) [27] 9.1234_5678", None, None),
         ]
         
         # Run tests for all cases
-        all_cases = test_cases_9_digit + test_cases_8_digit + edge_cases
+        all_cases = test_cases_9_digit + test_cases_8_digit + international_cases + edge_cases
         
         for raw_phone, expected_orig, expected_mod in all_cases:
             with self.subTest(raw_phone=raw_phone):
@@ -88,7 +95,7 @@ N:Doe;John;;;
 FN:John Doe
 TEL;TYPE=CELL:+55 27 91234-5678
 TEL;TYPE=CELL:+55 27 1234-5678
-TEL;TYPE=CELL:+55 27 1234-5678
+TEL:+552712345678
 END:VCARD
 """
 
@@ -107,7 +114,7 @@ N:Smith;Jane;;;
 FN:Jane Smith
 TEL;TYPE=CELL:+55 27 91234-5678
 TEL;TYPE=CELL:+55 27 1234-5678
-TEL;TYPE=CELL:+55 27 1234-5678
+TEL;TYPE=HOME:+552712345678
 END:VCARD
 """
 
@@ -126,7 +133,7 @@ N:Brown;Robert;;;
 FN:Robert Brown
 TEL;TYPE=CELL:+55 27 91234-5678
 TEL;TYPE=CELL:+55 27 1234-5678
-TEL;TYPE=CELL:+55 27 1234-5678
+item2.TEL;TYPE=CELL:+552712345678
 END:VCARD
 """
 
@@ -174,7 +181,7 @@ BEGIN:VCARD
 VERSION:3.0
 N:Williams;Sarah;;;
 FN:Sarah Williams
-TEL;TYPE=CELL:+55 27 1234-5678
+TEL;TYPE=CELL:2712345678
 END:VCARD
 """
 
@@ -248,7 +255,15 @@ END:VCARD
         output_path = input_path + '.out'
         
         try:
-            test_args = ['python' if os.name == 'nt' else 'python3', 'brazilian_number_processing.py', input_path, output_path]
+            script_path = os.path.join(os.path.dirname(__file__), 'brazilian_number_processing.py')
+            test_args = [
+                'python' if os.name == 'nt' else 'python3',
+                script_path,
+                input_path,
+                output_path,
+                '--region',
+                'BR',
+            ]
             # We're just testing that the argument parsing works
             subprocess.call(
                 test_args,

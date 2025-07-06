@@ -223,11 +223,11 @@ def import_from_json(json_file: str, data: Dict[str, ChatStore]):
         data: The dictionary to store the imported chat data.
     """
     from Whatsapp_Chat_Exporter.data_model import ChatStore, Message
-    with open(json_file, "r") as f:
-        temp_data = json.loads(f.read())
-    total_row_number = len(tuple(temp_data.keys()))
+    with open(json_file, "r", encoding="utf-8") as f:
+        temp_data = json.load(f)
+    total_row_number = len(temp_data)
     print(f"Importing chats from JSON...(0/{total_row_number})", end="\r")
-    for index, (jid, chat_data) in enumerate(temp_data.items()):
+    for index, (jid, chat_data) in enumerate(temp_data.items(), 1):
         chat = ChatStore(chat_data.get("type"), chat_data.get("name"))
         chat.my_avatar = chat_data.get("my_avatar")
         chat.their_avatar = chat_data.get("their_avatar")
@@ -255,7 +255,7 @@ def import_from_json(json_file: str, data: Dict[str, ChatStore]):
             message.sticker = msg.get("sticker")
             chat.add_message(id, message)
         data[jid] = chat
-        print(f"Importing chats from JSON...({index + 1}/{total_row_number})", end="\r")
+        print(f"Importing chats from JSON...({index}/{total_row_number})", end="\r")
 
 
 def sanitize_filename(file_name: str) -> str:
@@ -380,93 +380,58 @@ class DbType(StrEnum):
 
 
 def determine_metadata(content: sqlite3.Row, init_msg: Optional[str]) -> Optional[str]:
-    """Determines the metadata of a message.
+    """Return a user friendly description for a group/system message."""
 
-    Args:
-        content (sqlite3.Row): A row from the messages table.
-        init_msg (Optional[str]): The initial message, if any.
-
-    Returns:
-        The metadata as a string or None if the type is unsupported.
-    """
-    msg = init_msg if init_msg else ""
-    if content["is_me_joined"] == 1:  # Override
+    msg = init_msg or ""
+    if content["is_me_joined"] == 1:
         return f"You were added into the group by {msg}"
-    if content["action_type"] == 1:
-        msg += f''' changed the group name to "{content['data']}"'''
-    elif content["action_type"] == 4:
-        msg += " was added to the group"
-    elif content["action_type"] == 5:
-        msg += " left the group"
-    elif content["action_type"] == 6:
-        msg += f" changed the group icon"
-    elif content["action_type"] == 7:
-        msg = "You were removed"
-    elif content["action_type"] == 8:
-        msg += ("WhatsApp Internal Error Occurred: "
-                "you cannot send message to this group")
-    elif content["action_type"] == 9:
-        msg += " created a broadcast channel"
-    elif content["action_type"] == 10:
+
+    action = content["action_type"]
+
+    if action == 1:
+        return msg + f" changed the group name to \"{content['data']}\""
+    if action in (10, 28):
         try:
-            old = content['old_jid'].split('@')[0]
-            new = content['new_jid'].split('@')[0]
+            old = content["old_jid"].split("@")[0]
+            new = content["new_jid"].split("@")[0]
         except (AttributeError, IndexError):
             return None
-        else:
-            msg = f"{old} changed their number to {new}"
-    elif content["action_type"] == 11:
-        msg += f''' created a group with name: "{content['data']}"'''
-    elif content["action_type"] == 12:
-        msg += f" added someone"  # TODO: Find out who
-    elif content["action_type"] == 13:
-        return  # Someone left the group
-    elif content["action_type"] == 14:
-        msg += f" removed someone"  # TODO: Find out who
-    elif content["action_type"] == 15:
-        return  # Someone promoted someone as an admin
-    elif content["action_type"] == 18:
-        if msg != "You":
-            msg = f"The security code between you and {msg} changed"
-        else:
-            msg = "The security code in this chat changed"
-    elif content["action_type"] == 19:
-        msg = "This chat is now end-to-end encrypted"
-    elif content["action_type"] == 20:
-        msg = "Someone joined this group by using a invite link"  # TODO: Find out who
-    elif content["action_type"] == 27:
-        msg += " changed the group description to:<br>"
-        msg += (content['data'] or "Unknown").replace("\n", '<br>')
-    elif content["action_type"] == 28:
-        try:
-            old = content['old_jid'].split('@')[0]
-            new = content['new_jid'].split('@')[0]
-        except (AttributeError, IndexError):
-            return None
-        else:
-            msg = f"{old} changed their number to {new}"
-    elif content["action_type"] == 46:
-        return # Voice message in PM??? Seems no need to handle.
-    elif content["action_type"] == 47:
-        msg = "The contact is an official business account"
-    elif content["action_type"] == 50:
-        msg = "The contact's account type changed from business to standard"
-    elif content["action_type"] == 56:
-        msg = "Messgae timer was enabled/updated/disabled"
-    elif content["action_type"] == 57:
-        if msg != "You":
-            msg = f"The security code between you and {msg} changed"
-        else:
-            msg = "The security code in this chat changed"
-    elif content["action_type"] == 58:
-        msg = "You blocked this contact"
-    elif content["action_type"] == 67:
-        return  # (PM) this contact use secure service from Facebook???
-    elif content["action_type"] == 69:
-        return  # (PM) this contact use secure service from Facebook??? What's the difference with 67????
-    else:
-        return  # Unsupported
-    return msg
+        return f"{old} changed their number to {new}"
+    if action == 27:
+        details = (content["data"] or "Unknown").replace("\n", "<br>")
+        return msg + " changed the group description to:<br>" + details
+    if action in (18, 57):
+        return (
+            f"The security code between you and {msg} changed"
+            if msg != "You" else "The security code in this chat changed"
+        )
+    if action in (13, 15, 46, 67, 69):
+        return None
+
+    static_actions = {
+        4: " was added to the group",
+        5: " left the group",
+        6: " changed the group icon",
+        7: "You were removed",
+        8: "WhatsApp Internal Error Occurred: you cannot send message to this group",
+        9: " created a broadcast channel",
+        11: lambda c, m: m + f' created a group with name: "{c["data"]}"',
+        12: " added someone",
+        14: " removed someone",
+        19: "This chat is now end-to-end encrypted",
+        20: "Someone joined this group by using a invite link",
+        47: "The contact is an official business account",
+        50: "The contact's account type changed from business to standard",
+        56: "Messgae timer was enabled/updated/disabled",
+        58: "You blocked this contact",
+    }
+
+    handler = static_actions.get(action)
+    if handler is None:
+        return None
+    if callable(handler):
+        return handler(content, msg)
+    return msg + handler if handler.startswith(" ") else handler
 
 
 def get_status_location(output_folder: str, offline_static: str) -> str:
