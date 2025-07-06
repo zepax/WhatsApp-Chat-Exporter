@@ -67,16 +67,20 @@ def map_number_to_name(contacts, default_country_code: str):
     return mapping
 
 
-def normalize_number(number: str, country_code: str):
+def normalize_number(number: str, country_code: str) -> str:
+    """Normalise ``number`` by removing formatting characters and applying the
+    provided ``country_code`` if required."""
+
     # Clean the number
-    number = ''.join(c for c in number if c.isdigit() or c == "+")
+    number = "".join(c for c in number if c.isdigit() or c == "+")
 
-    # A number that starts with a + or 00 means it already have a country code
-    for starting_char in ('+', "00"):
-        if number.startswith(starting_char):
-            return number[len(starting_char):]
+    if number.startswith("+"):
+        return number[1:]
 
-    # leading zero should be removed
-    if starting_char == '0':
+    if number.startswith("00"):
+        return number[2:]
+
+    if number.startswith("0"):
         number = number[1:]
-    return country_code + number  # fall back
+
+    return country_code + number
