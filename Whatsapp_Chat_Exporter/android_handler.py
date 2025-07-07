@@ -825,12 +825,13 @@ def _process_single_media(
 
         # Copy media to separate folder if needed
         if separate_media:
-            chat_display_name = slugify(
-                current_chat.name
-                or message.sender
-                or content["key_remote_jid"].split("@")[0],
-                True,
-            )
+            if not current_chat.slug:
+                current_chat.slug = slugify(
+                    current_chat.name or message.sender
+                    or content["key_remote_jid"].split('@')[0],
+                    True,
+                )
+            chat_display_name = current_chat.slug
 
             current_filename = file_path.split("/")[-1]
             new_folder = os.path.join(media_folder, "separated", chat_display_name)
@@ -1313,10 +1314,9 @@ def create_txt(data, output):
                 formatted_message = _format_message_for_txt(message, contact)
                 f.write(f"{formatted_message}\n")
 
-
 def _format_message_for_txt(message, contact):
     """Format a message for text output."""
-    date = datetime.fromtimestamp(message.timestamp).date()
+    date = message.date
 
     # Determine the sender name
     if message.from_me:
