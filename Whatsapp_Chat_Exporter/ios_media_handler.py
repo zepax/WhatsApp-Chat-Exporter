@@ -213,7 +213,16 @@ class BackupExtractor:
                     row = c.fetchone()
                     continue
 
-                destination = os.path.join(_wts_id, row["relativePath"])
+                rel_path = os.path.normpath(row["relativePath"])
+                if os.path.isabs(rel_path) or rel_path.startswith(".."):
+                    row = c.fetchone()
+                    continue
+
+                destination = os.path.join(_wts_id, rel_path)
+                dest_abs = os.path.abspath(_wts_id) + os.sep
+                if not os.path.abspath(destination).startswith(dest_abs):
+                    row = c.fetchone()
+                    continue
                 hashes = row["fileID"]
                 folder = hashes[:2]
                 flags = row["flags"]
