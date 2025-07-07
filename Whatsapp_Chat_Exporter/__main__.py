@@ -626,7 +626,8 @@ def decrypt_android_backup(args) -> int:
         key = bytes.fromhex(args.key.replace(" ", ""))
     else:
         try:
-            key = open(args.key, "rb")
+            with open(args.key, "rb") as f:
+                key = f.read()
         except FileNotFoundError:
             logger.error("Key file not found at given path: %s", args.key)
             return 1
@@ -634,7 +635,8 @@ def decrypt_android_backup(args) -> int:
 
     # Read backup
     try:
-        db = open(args.backup, "rb").read()
+        with open(args.backup, "rb") as f:
+            db = f.read()
     except FileNotFoundError:
         logger.error("Backup file not found at given path: %s", args.backup)
         return 1
@@ -642,7 +644,8 @@ def decrypt_android_backup(args) -> int:
     # Process WAB if provided
     error_wa = 0
     if args.wab:
-        wab = open(args.wab, "rb").read()
+        with open(args.wab, "rb") as f:
+            wab = f.read()
         error_wa = android_crypt.decrypt_backup(
             wab,
             key,
@@ -1004,7 +1007,18 @@ def copy_exported_media(chat_file: str, data: ChatCollection, output_dir: str) -
                 rel_path = os.path.relpath(msg.data, src_dir)
             except ValueError:
                 continue
-            dst = os.path.join(media_dir, rel_path)
+
+            rel_path = os.path.normpath(rel_path)
+            if os.path.isabs(rel_path) or rel_path.startswith(".."):
+                logger.warning("Skipping unsafe media path: %s", msg.data)
+                continue
+
+            dst = os.path.normpath(os.path.join(media_dir, rel_path))
+            media_abs = os.path.abspath(media_dir) + os.sep
+            if not os.path.abspath(dst).startswith(media_abs):
+                logger.warning("Skipping media outside destination: %s", rel_path)
+                continue
+
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy2(msg.data, dst)
             msg.data = os.path.relpath(dst, output_dir)
