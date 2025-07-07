@@ -180,7 +180,16 @@ def process_attached_file(msg, message, file_path):
 
     # Extract file path and check if it exists
     file_name = message.split("(file attached)")[0].strip()
-    attached_file_path = os.path.join(os.path.dirname(file_path), file_name)
+    base_dir = os.path.abspath(os.path.dirname(file_path))
+    attached_file_path = os.path.normpath(
+        os.path.join(base_dir, file_name)
+    )
+
+    if not attached_file_path.startswith(base_dir + os.sep):
+        msg.data = "The media is missing"
+        msg.mime = "media"
+        msg.meta = True
+        return
 
     if os.path.isfile(attached_file_path):
         msg.data = attached_file_path
