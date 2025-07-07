@@ -568,6 +568,19 @@ def slugify(value: str, allow_unicode: bool = False) -> str:
     return re.sub(r'[-\s]+', '-', value).strip('-_')
 
 
+def copy_parallel(file_pairs: List[Tuple[str, str]], workers: int = 4) -> None:
+    """Copy multiple files concurrently.
+
+    Args:
+        file_pairs: List of ``(src, dst)`` tuples.
+        workers: Maximum number of concurrent threads.
+    """
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        tasks = [executor.submit(shutil.copy2, src, dst) for src, dst in file_pairs]
+        for task in tasks:
+            task.result()
+
+
 class WhatsAppIdentifier(StrEnum):
     MESSAGE = "7c7fba66680ef796b916b067077cc246adacf01d" # AppDomainGroup-group.net.whatsapp.WhatsApp.shared-ChatStorage.sqlite
     CONTACT = "b8548dc30aa1030df0ce18ef08b882cf7ab5212f" # AppDomainGroup-group.net.whatsapp.WhatsApp.shared-ContactsV2.sqlite
