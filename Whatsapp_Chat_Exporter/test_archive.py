@@ -2,6 +2,8 @@ import os
 import shutil
 import zipfile
 import tarfile
+import io
+import pytest
 from Whatsapp_Chat_Exporter.utility import extract_archive
 
 
@@ -41,3 +43,20 @@ def test_extract_tar(tmp_path):
             assert f.read() == "hello"
     finally:
         shutil.rmtree(out_dir)
+
+
+def _create_bad_tar(tmp_path, name: str):
+    tar_path = tmp_path / "bad.tar"
+    with tarfile.open(tar_path, "w") as tf:
+        info = tarfile.TarInfo(name)
+        data = b"bad"
+        info.size = len(data)
+        tf.addfile(info, io.BytesIO(data))
+    return tar_path
+
+
+@pytest.mark.parametrize("member", ["../evil.txt", "/abs.txt", "foo/../../bar"])
+def test_extract_tar_unsafe(tmp_path, member):
+    archive = _create_bad_tar(tmp_path, member)
+    with pytest.raises(ValueError):
+        extract_archive(str(archive))
