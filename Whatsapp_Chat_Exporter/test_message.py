@@ -26,6 +26,7 @@ import os
 from Whatsapp_Chat_Exporter.data_model import ChatCollection, ChatStore
 from Whatsapp_Chat_Exporter.utility import Device
 import Whatsapp_Chat_Exporter.android_handler as android_handler
+import Whatsapp_Chat_Exporter.ios_handler as ios_handler
 
 
 def test_slug_cached(monkeypatch, tmp_path):
@@ -96,3 +97,4 @@ def test_get_last_message():
     chat.add_message("2", msg2)
 
     assert chat.get_last_message() is msg2
+
