@@ -626,7 +626,8 @@ def decrypt_android_backup(args) -> int:
         key = bytes.fromhex(args.key.replace(" ", ""))
     else:
         try:
-            key = open(args.key, "rb")
+            with open(args.key, "rb") as f:
+                key = f.read()
         except FileNotFoundError:
             logger.error("Key file not found at given path: %s", args.key)
             return 1
@@ -634,7 +635,8 @@ def decrypt_android_backup(args) -> int:
 
     # Read backup
     try:
-        db = open(args.backup, "rb").read()
+        with open(args.backup, "rb") as f:
+            db = f.read()
     except FileNotFoundError:
         logger.error("Backup file not found at given path: %s", args.backup)
         return 1
@@ -642,7 +644,8 @@ def decrypt_android_backup(args) -> int:
     # Process WAB if provided
     error_wa = 0
     if args.wab:
-        wab = open(args.wab, "rb").read()
+        with open(args.wab, "rb") as f:
+            wab = f.read()
         error_wa = android_crypt.decrypt_backup(
             wab,
             key,
