@@ -806,6 +806,7 @@ def process_calls(args, db, data: ChatCollection, filter_chat) -> None:
 
 def handle_media_directory(args, temp_dirs=None) -> None:
     """Handle media directory copying or moving."""
+
     if args.skip_media:
         print("\nSkipping media directory as per --skip-media", end="\n")
         return
@@ -830,6 +831,7 @@ def handle_media_directory(args, temp_dirs=None) -> None:
             else:
                 logger.info("Copying media directory...")
                 shutil.copytree(args.media, media_path)
+
         if args.cleanup_temp and not args.move_media:
             abs_media = os.path.abspath(args.media)
             if temp_dirs and any(
