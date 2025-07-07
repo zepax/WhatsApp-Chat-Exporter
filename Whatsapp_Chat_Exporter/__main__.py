@@ -8,8 +8,7 @@ import json
 import string
 import glob
 import importlib.metadata
-import zipfile
-import tarfile
+import psutil
 from Whatsapp_Chat_Exporter import android_crypt, exported_handler, android_handler
 from Whatsapp_Chat_Exporter import ios_handler, ios_media_handler
 from Whatsapp_Chat_Exporter.data_model import ChatCollection, ChatStore
@@ -33,6 +32,15 @@ else:
     from Whatsapp_Chat_Exporter.vcards_contacts import ContactsFromVCards
 
     vcards_deps_installed = True
+
+
+def report_resource_usage(stage: str) -> None:
+    """Print memory and disk usage statistics."""
+    mem = psutil.virtual_memory()
+    disk = psutil.disk_usage(".")
+    print(
+        f"[{stage}] Memory: {mem.percent:.1f}% used, Disk: {disk.percent:.1f}% used"
+    )
 
 
 def setup_argument_parser() -> ArgumentParser:
@@ -279,7 +287,15 @@ def setup_argument_parser() -> ArgumentParser:
         action="store_true",
         help="Create a copy of the media seperated per chat in <MEDIA>/separated/ directory",
     )
-
+    media_group.add_argument(
+        "--skip-media", dest="skip_media", default=False, action='store_true',
+        help="Skip copying or extracting media files"
+    )
+    media_group.add_argument(
+        "--cleanup-temp", dest="cleanup_temp", default=False, action='store_true',
+        help="Delete temporary files after processing"
+    )
+    
     # Filtering options
     filter_group = parser.add_argument_group("Filtering Options")
     filter_group.add_argument(
@@ -745,6 +761,9 @@ def process_calls(args, db, data: ChatCollection, filter_chat) -> None:
 
 def handle_media_directory(args) -> None:
     """Handle media directory copying or moving."""
+    if args.skip_media:
+        print("\nSkipping media directory as per --skip-media", end="\n")
+        return
     if os.path.isdir(args.media):
         media_path = os.path.join(args.output, args.media)
 
@@ -767,6 +786,8 @@ def handle_media_directory(args) -> None:
             else:
                 logger.info("Copying media directory...")
                 shutil.copytree(args.media, media_path)
+        if args.cleanup_temp and not args.move_media:
+            shutil.rmtree(args.media, ignore_errors=True)
 
 
 def create_output_files(args, data: ChatCollection, contact_store=None) -> None:
@@ -914,7 +935,12 @@ def run(args, parser: ArgumentParser | None = None) -> None:
 
     if args.check_update:
         exit(check_update())
-
+    
+    # Validate arguments
+    validate_args(parser, args)
+    report_resource_usage("Initial")
+    
+    # Create output directory if it doesn't exist
     os.makedirs(args.output, exist_ok=True)
 
     data = ChatCollection()
@@ -1000,18 +1026,14 @@ def run(args, parser: ArgumentParser | None = None) -> None:
 
         # Process messages, media, and calls
         process_messages(args, data)
-
+        report_resource_usage("After messages")
+        
         # Create output files
         create_output_files(args, data, contact_store)
 
         # Handle media directory
         handle_media_directory(args)
+        report_resource_usage("After media handling")
 
         print("Everything is done!")
-
-
-def main() -> None:
-    """Entry point for console scripts."""
-    parser = setup_argument_parser()
-    args = parser.parse_args()
-    run(args, parser)
+        report_resource_usage("Final")

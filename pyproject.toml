@@ -38,8 +38,7 @@ dependencies = [
     "jinja2",
     "bleach",
     "phonenumbers",
-    "typer",
-    "rich"
+    "psutil"
 ]
 
 [project.optional-dependencies]
