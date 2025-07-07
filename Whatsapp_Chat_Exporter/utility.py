@@ -379,6 +379,22 @@ class DbType(StrEnum):
     CONTACT = "contact"
 
 
+def _extract_participant(data: Optional[str]) -> Optional[str]:
+    """Return participant identifier from metadata."""
+
+    if not data:
+        return None
+    cleaned = re.sub(r'["\n]', ' ', str(data))
+    for token in re.split(r'[ ,;]+', cleaned):
+        token = token.strip()
+        if not token:
+            continue
+        if "@" in token:
+            return token.split("@")[0]
+        return token
+    return None
+
+
 def determine_metadata(content: sqlite3.Row, init_msg: Optional[str]) -> Optional[str]:
     """Return a user friendly description for a group/system message."""
 
@@ -409,17 +425,25 @@ def determine_metadata(content: sqlite3.Row, init_msg: Optional[str]) -> Optiona
         return None
 
     static_actions = {
-        4: " was added to the group",
+        4: lambda c, m: (
+            f"{_extract_participant(c['data']) or m} was added to the group"
+        ),
         5: " left the group",
         6: " changed the group icon",
         7: "You were removed",
-        8: "WhatsApp Internal Error Occurred: you cannot send message to this group",
+        8: (
+            "WhatsApp Internal Error Occurred: "
+            "you cannot send message to this group"
+        ),
         9: " created a broadcast channel",
         11: lambda c, m: m + f' created a group with name: "{c["data"]}"',
-        12: " added someone",
-        14: " removed someone",
+        12: lambda c, m: m + f" added {_extract_participant(c['data']) or 'someone'}",
+        14: lambda c, m: m + f" removed {_extract_participant(c['data']) or 'someone'}",
         19: "This chat is now end-to-end encrypted",
-        20: "Someone joined this group by using a invite link",
+        20: lambda c, m: (
+            f"{_extract_participant(c['data']) or m or 'Someone'} joined this "
+            "group by using an invite link"
+        ),
         47: "The contact is an official business account",
         50: "The contact's account type changed from business to standard",
         56: "Messgae timer was enabled/updated/disabled",
@@ -455,7 +479,8 @@ def get_status_location(output_folder: str, offline_static: str) -> str:
     w3css_path = os.path.join(static_folder, "w3.css")
     if not os.path.isfile(w3css_path):
         with urllib.request.urlopen(w3css) as resp:
-            with open(w3css_path, "wb") as f: f.write(resp.read())
+            with open(w3css_path, "wb") as f:
+                f.write(resp.read())
     w3css = os.path.join(offline_static, "w3.css")
 
 
