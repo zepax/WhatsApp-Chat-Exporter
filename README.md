@@ -245,6 +245,12 @@ WhatsApp Chat Exporter: 0.12.0 Licensed with MIT. See https://wts.knugi.dev/docs
 licenses.
 ```
 
+## Limitations
+
+Group management messages rely on metadata stored in the database. When
+participant information is missing, the exporter falls back to generic text such
+as "someone".
+
 # Legal Stuff & Disclaimer
 
 This is a MIT licensed project.
