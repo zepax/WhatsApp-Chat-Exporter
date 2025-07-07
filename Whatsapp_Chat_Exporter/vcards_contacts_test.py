@@ -29,3 +29,5 @@ def test_normalize_number():
     assert normalize_number('+1531234567', '34') == '1531234567'
     assert normalize_number('053(123)4567', '34') == '34531234567'
     assert normalize_number('0531-234-567', '58') == '58531234567'
+    assert normalize_number('0531234567', '') == '531234567'
+    assert normalize_number('0531-234-567', '') == '531234567'
