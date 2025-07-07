@@ -37,7 +37,10 @@ requires-python = ">=3.9"
 dependencies = [
     "jinja2",
     "bleach",
-    "phonenumbers"
+    "phonenumbers",
+    "typer",
+    "rich"
+
 ]
 
 [project.optional-dependencies]
@@ -51,9 +54,9 @@ backup = ["pycryptodome", "javaobj-py3"]
 vcards = ["vobject", "pycryptodome", "javaobj-py3", "phonenumbers"]
 
 [project.scripts]
-wtsexporter = "Whatsapp_Chat_Exporter.__main__:main"
-waexporter = "Whatsapp_Chat_Exporter.__main__:main"
-whatsapp-chat-exporter = "Whatsapp_Chat_Exporter.__main__:main"
+wtsexporter = "Whatsapp_Chat_Exporter.cli:app"
+waexporter = "Whatsapp_Chat_Exporter.cli:app"
+whatsapp-chat-exporter = "Whatsapp_Chat_Exporter.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["."]
