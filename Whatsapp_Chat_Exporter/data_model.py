@@ -7,6 +7,7 @@ class Timing:
     """
     Handles timestamp formatting with timezone support.
     """
+
     def __init__(self, timezone_offset: Optional[int]) -> None:
         """
         Initialize Timing object.
@@ -16,7 +17,9 @@ class Timing:
         """
         self.timezone_offset = timezone_offset
 
-    def format_timestamp(self, timestamp: Optional[Union[int, float]], format: str) -> Optional[str]:
+    def format_timestamp(
+        self, timestamp: Optional[Union[int, float]], format: str
+    ) -> Optional[str]:
         """
         Format a timestamp with the specified format string.
 
@@ -29,7 +32,9 @@ class Timing:
         """
         if timestamp:
             timestamp = timestamp / 1000 if timestamp > 9999999999 else timestamp
-            return datetime.fromtimestamp(timestamp, TimeZone(self.timezone_offset)).strftime(format)
+            return datetime.fromtimestamp(
+                timestamp, TimeZone(self.timezone_offset)
+            ).strftime(format)
         return None
 
 
@@ -37,6 +42,7 @@ class TimeZone(tzinfo):
     """
     Custom timezone class with fixed offset.
     """
+
     def __init__(self, offset: int) -> None:
         """
         Initialize TimeZone object.
@@ -65,11 +71,11 @@ class ChatCollection(MutableMapping):
         """Initialize an empty chat collection."""
         self._chats: Dict[str, ChatStore] = {}
 
-    def __getitem__(self, key: str) -> 'ChatStore':
+    def __getitem__(self, key: str) -> "ChatStore":
         """Get a chat by its ID. Required for dict-like access."""
         return self._chats[key]
 
-    def __setitem__(self, key: str, value: 'ChatStore') -> None:
+    def __setitem__(self, key: str, value: "ChatStore") -> None:
         """Set a chat by its ID. Required for dict-like access."""
         if not isinstance(value, ChatStore):
             raise TypeError("Value must be a ChatStore object")
@@ -87,7 +93,7 @@ class ChatCollection(MutableMapping):
         """Get number of chats. Required for dict-like access."""
         return len(self._chats)
 
-    def get_chat(self, chat_id: str) -> Optional['ChatStore']:
+    def get_chat(self, chat_id: str) -> Optional["ChatStore"]:
         """
         Get a chat by its ID.
 
@@ -99,7 +105,7 @@ class ChatCollection(MutableMapping):
         """
         return self._chats.get(chat_id)
 
-    def add_chat(self, chat_id: str, chat: 'ChatStore') -> 'ChatStore':
+    def add_chat(self, chat_id: str, chat: "ChatStore") -> "ChatStore":
         """Add a new chat to the collection.
 
         Args:
@@ -153,7 +159,10 @@ class ChatStore:
     """
     Stores chat information and messages.
     """
-    def __init__(self, type: str, name: Optional[str] = None, media: Optional[str] = None) -> None:
+
+    def __init__(
+        self, type: str, name: Optional[str] = None, media: Optional[str] = None
+    ) -> None:
         """
         Initialize ChatStore object.
 
@@ -162,7 +171,7 @@ class ChatStore:
             name (Optional[str]): Chat name
             media (Optional[str]): Path to WhatsApp folder containing the Media
                 directory
-        
+
         Raises:
             TypeError: If name is not a string or None
         """
@@ -171,16 +180,17 @@ class ChatStore:
         self.name = name
         if name:
             from Whatsapp_Chat_Exporter.utility import slugify
+
             self.slug = slugify(name, True)
         else:
             self.slug = None
-        self._messages: Dict[str, 'Message'] = {}
+        self._messages: Dict[str, "Message"] = {}
         self.type = type
         if media is not None:
             from Whatsapp_Chat_Exporter.utility import Device
+
             if self.type == Device.IOS:
-                self.my_avatar = os.path.join(media, "Media", "Profile",
-                                             "Photo.jpg")
+                self.my_avatar = os.path.join(media, "Media", "Profile", "Photo.jpg")
             elif self.type == Device.ANDROID:
                 self.my_avatar = os.path.join(
                     media, "Media", "WhatsApp Profile Photos", "me.jpg"
@@ -193,18 +203,18 @@ class ChatStore:
         self.their_avatar_thumb = None
         self.status = None
         self.media_base = ""
-    
+
     def __len__(self) -> int:
         """Get number of chats. Required for dict-like access."""
         return len(self._messages)
 
-    def add_message(self, id: str, message: 'Message') -> None:
+    def add_message(self, id: str, message: "Message") -> None:
         """Add a message to the chat store."""
         if not isinstance(message, Message):
             raise TypeError("message must be a Message object")
         self._messages[id] = message
-    
-    def get_message(self, id: str) -> 'Message':
+
+    def get_message(self, id: str) -> "Message":
         """Get a message from the chat store."""
         return self._messages.get(id)
 
@@ -216,19 +226,19 @@ class ChatStore:
     def to_json(self) -> Dict[str, Any]:
         """Convert chat store to JSON-serializable dict."""
         return {
-            'name': self.name,
-            'type': self.type,
-            'my_avatar': self.my_avatar,
-            'their_avatar': self.their_avatar,
-            'their_avatar_thumb': self.their_avatar_thumb,
-            'status': self.status,
-            'messages': {id: msg.to_json() for id, msg in self._messages.items()}
+            "name": self.name,
+            "type": self.type,
+            "my_avatar": self.my_avatar,
+            "their_avatar": self.their_avatar,
+            "their_avatar_thumb": self.their_avatar_thumb,
+            "status": self.status,
+            "messages": {id: msg.to_json() for id, msg in self._messages.items()},
         }
 
-    def get_last_message(self) -> 'Message':
+    def get_last_message(self) -> "Message":
         """Get the most recent message in the chat."""
-        return tuple(self._messages.values())[-1]
-    
+        return next(reversed(self._messages.values()))
+
     def items(self):
         """Get message items pairs."""
         return self._messages.items()
@@ -246,17 +256,18 @@ class Message:
     """
     Represents a single message in a chat.
     """
+
     def __init__(
-            self,
-            *,
-            from_me: Union[bool, int],
-            timestamp: int,
-            time: Union[int, float, str],
-            key_id: int,
-            received_timestamp: int,
-            read_timestamp: int,
-            timezone_offset: int = 0,
-            message_type: Optional[int] = None
+        self,
+        *,
+        from_me: Union[bool, int],
+        timestamp: int,
+        time: Union[int, float, str],
+        key_id: int,
+        received_timestamp: int,
+        read_timestamp: int,
+        timezone_offset: int = 0,
+        message_type: Optional[int] = None,
     ) -> None:
         """
         Initialize Message object.
@@ -277,7 +288,7 @@ class Message:
         self.from_me = bool(from_me)
         self.timestamp = timestamp / 1000 if timestamp > 9999999999 else timestamp
         timing = Timing(timezone_offset)
-        
+
         if isinstance(time, (int, float)):
             self.time = timing.format_timestamp(self.timestamp, "%H:%M")
         elif isinstance(time, str):
@@ -294,9 +305,11 @@ class Message:
         self.safe = False
         self.mime = None
         self.message_type = message_type
-        self.received_timestamp = timing.format_timestamp(received_timestamp, "%Y/%m/%d %H:%M")
+        self.received_timestamp = timing.format_timestamp(
+            received_timestamp, "%Y/%m/%d %H:%M"
+        )
         self.read_timestamp = timing.format_timestamp(read_timestamp, "%Y/%m/%d %H:%M")
-        
+
         # Extra attributes
         self.reply = None
         self.quoted_data = None
@@ -307,20 +320,20 @@ class Message:
     def to_json(self) -> Dict[str, Any]:
         """Convert message to JSON-serializable dict."""
         return {
-            'from_me': self.from_me,
-            'timestamp': self.timestamp,
-            'time': self.time,
-            'date': self.date,
-            'media': self.media,
-            'key_id': self.key_id,
-            'meta': self.meta,
-            'data': self.data,
-            'sender': self.sender,
-            'safe': self.safe,
-            'mime': self.mime,
-            'reply': self.reply,
-            'quoted_data': self.quoted_data,
-            'caption': self.caption,
-            'thumb': self.thumb,
-            'sticker': self.sticker
+            "from_me": self.from_me,
+            "timestamp": self.timestamp,
+            "time": self.time,
+            "date": self.date,
+            "media": self.media,
+            "key_id": self.key_id,
+            "meta": self.meta,
+            "data": self.data,
+            "sender": self.sender,
+            "safe": self.safe,
+            "mime": self.mime,
+            "reply": self.reply,
+            "quoted_data": self.quoted_data,
+            "caption": self.caption,
+            "thumb": self.thumb,
+            "sticker": self.sticker,
         }
