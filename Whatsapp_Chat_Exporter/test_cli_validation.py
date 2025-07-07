@@ -54,3 +54,9 @@ def test_key_required_for_backup(tmp_path, capsys, monkeypatch):
         validate_args(parser, args)
     err = capsys.readouterr().err
     assert "Encryption key needed" in err
+
+
+def test_parse_summary_option(monkeypatch):
+    parser = _parser(monkeypatch)
+    args = parser.parse_args(["-a", "--summary", "sum.json"])
+    assert args.summary == "sum.json"
