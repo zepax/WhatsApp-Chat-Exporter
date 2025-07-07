@@ -3,7 +3,12 @@
 import tempfile
 import os
 
-from Whatsapp_Chat_Exporter.vcards_contacts import normalize_number, read_vcards_file
+from Whatsapp_Chat_Exporter.vcards_contacts import (
+    normalize_number,
+    read_vcards_file,
+    map_number_to_name,
+    filter_chats_by_prefix,
+)
 
 
 def test_readVCardsFile():
@@ -18,10 +23,23 @@ def test_readVCardsFile():
         os.unlink(path)
 
 def test_create_number_to_name_dicts():
-    pass
+    contacts = [
+        {"full_name": "Alice", "numbers": ["0531234567", "+1537654321"]},
+        {"full_name": "Bob", "numbers": ["12345"]},
+    ]
+    mapping = map_number_to_name(contacts, "1")
+    assert ("1531234567", "Alice (1)") in mapping
+    assert ("1537654321", "Alice (2)") in mapping
+    assert ("112345", "Bob") in mapping
 
 def test_fuzzy_match_numbers():
-    pass
+    chats = {
+        "1234567890": object(),
+        "12345": object(),
+        "987654321": object(),
+    }
+    filtered = filter_chats_by_prefix(chats, "123")
+    assert set(filtered.keys()) == {"1234567890", "12345"}
 
 def test_normalize_number():
     assert normalize_number('0531234567', '1') == '1531234567'
