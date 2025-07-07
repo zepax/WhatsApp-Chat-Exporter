@@ -99,16 +99,18 @@ class ChatCollection(MutableMapping):
         """
         return self._chats.get(chat_id)
 
-    def add_chat(self, chat_id: str, chat: 'ChatStore') -> None:
-        """
-        Add a new chat to the collection.
+    def add_chat(self, chat_id: str, chat: 'ChatStore') -> 'ChatStore':
+        """Add a new chat to the collection.
 
         Args:
-            chat_id (str): The ID for the chat
-            chat (ChatStore): The chat to add
+            chat_id (str): The ID for the chat.
+            chat (ChatStore): The chat to add.
+
+        Returns:
+            ChatStore: The stored chat instance.
 
         Raises:
-            TypeError: If chat is not a ChatStore object
+            TypeError: If ``chat`` is not a :class:`ChatStore` object.
         """
         if not isinstance(chat, ChatStore):
             raise TypeError("Chat must be a ChatStore object")
