@@ -8,6 +8,7 @@ import json
 import string
 import glob
 import importlib.metadata
+import psutil
 from Whatsapp_Chat_Exporter import android_crypt, exported_handler, android_handler
 from Whatsapp_Chat_Exporter import ios_handler, ios_media_handler
 from Whatsapp_Chat_Exporter.data_model import ChatCollection, ChatStore
@@ -30,6 +31,15 @@ else:
     from Whatsapp_Chat_Exporter.vcards_contacts import ContactsFromVCards
 
     vcards_deps_installed = True
+
+
+def report_resource_usage(stage: str) -> None:
+    """Print memory and disk usage statistics."""
+    mem = psutil.virtual_memory()
+    disk = psutil.disk_usage(".")
+    print(
+        f"[{stage}] Memory: {mem.percent:.1f}% used, Disk: {disk.percent:.1f}% used"
+    )
 
 
 def setup_argument_parser() -> ArgumentParser:
@@ -176,6 +186,16 @@ def setup_argument_parser() -> ArgumentParser:
         help="Maximum (rough) size of a single output file in bytes, 0 for auto",
     )
 
+    output_group.add_argument(
+        "--summary",
+        dest="summary",
+        nargs="?",
+        default=None,
+        const="summary.json",
+        help="Output a summary JSON with message counts per chat",
+    )
+    
+
     # JSON formatting options
     json_group = parser.add_argument_group("JSON Options")
     json_group.add_argument(
@@ -277,6 +297,15 @@ def setup_argument_parser() -> ArgumentParser:
         help="Create a copy of the media seperated per chat in <MEDIA>/separated/ directory",
     )
 
+    media_group.add_argument(
+        "--skip-media", dest="skip_media", default=False, action='store_true',
+        help="Skip copying or extracting media files"
+    )
+    media_group.add_argument(
+        "--cleanup-temp", dest="cleanup_temp", default=False, action='store_true',
+        help="Delete temporary files after processing"
+    )
+    
     # Filtering options
     filter_group = parser.add_argument_group("Filtering Options")
     filter_group.add_argument(
@@ -715,6 +744,9 @@ def process_calls(args, db, data: ChatCollection, filter_chat) -> None:
 
 def handle_media_directory(args) -> None:
     """Handle media directory copying or moving."""
+    if args.skip_media:
+        print("\nSkipping media directory as per --skip-media", end="\n")
+        return
     if os.path.isdir(args.media):
         media_path = os.path.join(args.output, args.media)
 
@@ -737,6 +769,8 @@ def handle_media_directory(args) -> None:
             else:
                 print("\nCopying media directory...", end="\n")
                 shutil.copytree(args.media, media_path)
+        if args.cleanup_temp and not args.move_media:
+            shutil.rmtree(args.media, ignore_errors=True)
 
 
 def create_output_files(args, data: ChatCollection, contact_store=None) -> None:
@@ -767,6 +801,10 @@ def create_output_files(args, data: ChatCollection, contact_store=None) -> None:
     # Create JSON files if requested
     if args.json and not args.import_json:
         export_json(args, data, contact_store)
+
+    # Create summary file if requested
+    if args.summary:
+        export_summary(args, data)
 
 
 def export_json(args, data: ChatCollection, contact_store=None) -> None:
@@ -855,6 +893,23 @@ def export_multiple_json(args, data: Dict) -> None:
             f.write(file_content)
 
 
+def export_summary(args, data: ChatCollection) -> None:
+    """Export a JSON summary containing message counts for each chat."""
+    summary = {
+        "total_chats": len(data),
+        "chats": {},
+    }
+
+    for jid, chat in data.items():
+        summary["chats"][jid] = {
+            "name": chat.name,
+            "message_count": len(chat),
+        }
+
+    with open(args.summary, "w") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=2)
+
+
 def process_exported_chat(args, data: ChatCollection) -> None:
     """Process an exported chat file."""
     exported_handler.messages(args.exported, data, args.assume_first_as_me)
@@ -884,7 +939,12 @@ def run(args, parser: ArgumentParser | None = None) -> None:
 
     if args.check_update:
         exit(check_update())
-
+    
+    # Validate arguments
+    validate_args(parser, args)
+    report_resource_usage("Initial")
+    
+    # Create output directory if it doesn't exist
     os.makedirs(args.output, exist_ok=True)
 
     data = ChatCollection()
@@ -963,18 +1023,22 @@ def run(args, parser: ArgumentParser | None = None) -> None:
 
         # Process messages, media, and calls
         process_messages(args, data)
-
+        report_resource_usage("After messages")
+        
         # Create output files
         create_output_files(args, data, contact_store)
 
         # Handle media directory
         handle_media_directory(args)
+        report_resource_usage("After media handling")
 
         print("Everything is done!")
-
 
 def main() -> None:
     """Entry point for console scripts."""
     parser = setup_argument_parser()
     args = parser.parse_args()
     run(args, parser)
+
+        report_resource_usage("Final")
+
