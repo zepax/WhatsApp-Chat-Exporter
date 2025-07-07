@@ -6,7 +6,6 @@ import sqlite3
 import shutil
 import json
 import string
-import glob
 import importlib.metadata
 import zipfile
 import tarfile
@@ -239,7 +238,11 @@ def setup_argument_parser() -> ArgumentParser:
     # HTML options
     html_group = parser.add_argument_group("HTML Options")
     html_group.add_argument(
-        "-t", "--template", dest="template", default=None, help="Path to custom HTML template"
+        "-t",
+        "--template",
+        dest="template",
+        default=None,
+        help="Path to custom HTML template",
     )
     html_group.add_argument(
         "--embedded",
@@ -249,7 +252,10 @@ def setup_argument_parser() -> ArgumentParser:
         help=SUPPRESS or "Embed media into HTML file (not yet implemented)",
     )
     html_group.add_argument(
-        "--offline", dest="offline", default=None, help="Relative path to offline static files"
+        "--offline",
+        dest="offline",
+        default=None,
+        help="Relative path to offline static files",
     )
     html_group.add_argument(
         "--no-avatar",
@@ -432,7 +438,9 @@ def validate_args(parser: ArgumentParser, args) -> None:
             "You must either specify a JSON output file, text file output directory or enable HTML output."
         )
     if args.import_json and (args.android or args.ios or args.exported or args.no_html):
-        parser.error("You can only use --import with -j and without --no-html, -a, -i, -e.")
+        parser.error(
+            "You can only use --import with -j and without --no-html, -a, -i, -e."
+        )
     elif args.import_json and not os.path.isfile(args.json):
         parser.error("JSON file not found.")
     if args.android and args.business:
@@ -449,7 +457,9 @@ def validate_args(parser: ArgumentParser, args) -> None:
             or (not args.json.endswith(".json") and os.path.isfile(args.json))
         )
     ):
-        parser.error("When --per-chat is enabled, the destination of --json must be a directory.")
+        parser.error(
+            "When --per-chat is enabled, the destination of --json must be a directory."
+        )
 
     # vCards validation
     if args.enrich_from_vcards is not None and args.default_country_code is None:
@@ -458,7 +468,11 @@ def validate_args(parser: ArgumentParser, args) -> None:
         )
 
     # Size validation
-    if args.size is not None and not isinstance(args.size, int) and not args.size.isnumeric():
+    if (
+        args.size is not None
+        and not isinstance(args.size, int)
+        and not args.size.isnumeric()
+    ):
         try:
             args.size = readable_to_bytes(args.size)
         except ValueError:
@@ -506,7 +520,9 @@ def validate_args(parser: ArgumentParser, args) -> None:
         parser.error(f"Key file not found at given path: {args.key}")
 
 
-def validate_chat_filters(parser: ArgumentParser, chat_filter: Optional[List[str]]) -> None:
+def validate_chat_filters(
+    parser: ArgumentParser, chat_filter: Optional[List[str]]
+) -> None:
     """Validate chat filters to ensure they contain only phone numbers."""
     if chat_filter is not None:
         for chat in chat_filter:
@@ -539,8 +555,12 @@ def process_date_filter(parser: ArgumentParser, args) -> None:
 def process_single_date_filter(parser: ArgumentParser, args) -> None:
     """Process single date comparison filters."""
     if len(args.filter_date) < 3:
-        parser.error("Unsupported date format. See https://wts.knugi.dev/docs?dest=date")
-    _timestamp = int(datetime.strptime(args.filter_date[2:], args.filter_date_format).timestamp())
+        parser.error(
+            "Unsupported date format. See https://wts.knugi.dev/docs?dest=date"
+        )
+    _timestamp = int(
+        datetime.strptime(args.filter_date[2:], args.filter_date_format).timestamp()
+    )
 
     if _timestamp < 1009843200:
         parser.error("WhatsApp was first released in 2009...")
@@ -556,7 +576,9 @@ def process_single_date_filter(parser: ArgumentParser, args) -> None:
         elif args.ios:
             args.filter_date = f"<= {_timestamp - APPLE_TIME}"
     else:
-        parser.error("Unsupported date format. See https://wts.knugi.dev/docs?dest=date")
+        parser.error(
+            "Unsupported date format. See https://wts.knugi.dev/docs?dest=date"
+        )
 
 
 def setup_contact_store(args) -> Optional["ContactsFromVCards"]:
@@ -590,7 +612,9 @@ def decrypt_android_backup(args) -> int:
     elif "crypt15" in args.backup:
         crypt = Crypt.CRYPT15
     else:
-        logger.error("Unknown backup format. The backup file must be crypt12, crypt14 or crypt15.")
+        logger.error(
+            "Unknown backup format. The backup file must be crypt12, crypt14 or crypt15."
+        )
 
         return 1
 
@@ -674,7 +698,9 @@ def auto_detect_backup(args, temp_dirs) -> None:
         return
     if args.backup:
         path = args.backup
-        if os.path.isfile(path) and (zipfile.is_zipfile(path) or tarfile.is_tarfile(path)):
+        if os.path.isfile(path) and (
+            zipfile.is_zipfile(path) or tarfile.is_tarfile(path)
+        ):
             path = extract_archive(path)
             temp_dirs.append(path)
         lower = os.path.basename(path).lower()
@@ -699,7 +725,9 @@ def auto_detect_backup(args, temp_dirs) -> None:
 
 
 def process_contacts(args, data: ChatCollection, contact_store=None) -> None:
-    contact_db = args.wa if args.wa else "wa.db" if args.android else "ContactsV2.sqlite"
+    contact_db = (
+        args.wa if args.wa else "wa.db" if args.android else "ContactsV2.sqlite"
+    )
 
     if os.path.isfile(contact_db):
         with sqlite3.connect(contact_db) as db:
@@ -712,7 +740,11 @@ def process_contacts(args, data: ChatCollection, contact_store=None) -> None:
 
 def process_messages(args, data: ChatCollection) -> None:
     """Process messages, media and vcards from the database."""
-    msg_db = args.db if args.db else "msgstore.db" if args.android else args.identifiers.MESSAGE
+    msg_db = (
+        args.db
+        if args.db
+        else "msgstore.db" if args.android else args.identifiers.MESSAGE
+    )
 
     if not os.path.isfile(msg_db):
         logger.error(
@@ -780,7 +812,9 @@ def handle_media_directory(args) -> None:
         media_path = os.path.join(args.output, args.media)
 
         if os.path.isdir(media_path):
-            logger.info("WhatsApp directory already exists in output directory. Skipping...")
+            logger.info(
+                "WhatsApp directory already exists in output directory. Skipping..."
+            )
 
         else:
             if args.move_media:
@@ -856,7 +890,9 @@ def export_single_json(args, data: Dict) -> None:
     """Export data to a single JSON file."""
     with open(args.json, "w") as f:
         json_data = json.dumps(
-            data, ensure_ascii=not args.avoid_encoding_json, indent=args.pretty_print_json
+            data,
+            ensure_ascii=not args.avoid_encoding_json,
+            indent=args.pretty_print_json,
         )
         logger.info("Writing JSON file...(%s)", bytes_to_readable(len(json_data)))
         f.write(json_data)
@@ -932,6 +968,37 @@ def export_summary(args, data: ChatCollection) -> None:
         json.dump(summary, f, indent=2)
 
 
+def copy_exported_media(chat_file: str, data: ChatCollection, output_dir: str) -> None:
+    """Copy media referenced in an exported chat.
+
+    Args:
+        chat_file: Path to the exported chat file.
+        data: Collection that contains the parsed chat.
+        output_dir: Destination folder for the media files.
+    """
+    src_dir = os.path.dirname(chat_file)
+    chat = data.get_chat("ExportedChat")
+    if chat is None:
+        return
+
+    media_dir = os.path.join(output_dir, "media")
+    os.makedirs(media_dir, exist_ok=True)
+
+    for msg in chat.values():
+        if msg.media and isinstance(msg.data, str) and os.path.isfile(msg.data):
+            try:
+                rel_path = os.path.relpath(msg.data, src_dir)
+            except ValueError:
+                continue
+            dst = os.path.join(media_dir, rel_path)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(msg.data, dst)
+            msg.data = os.path.relpath(dst, output_dir)
+
+    if chat.media_base == "":
+        chat.media_base = "media/"
+
+
 def process_exported_chat(args, data: ChatCollection) -> None:
     """Process an exported chat file."""
     exported_handler.messages(
@@ -940,6 +1007,8 @@ def process_exported_chat(args, data: ChatCollection) -> None:
         args.assume_first_as_me,
         args.prompt_user,
     )
+
+    copy_exported_media(args.exported, data, args.output)
 
     if not args.no_html:
         android_handler.create_html(
@@ -953,10 +1022,6 @@ def process_exported_chat(args, data: ChatCollection) -> None:
             args.whatsapp_theme,
             args.headline,
         )
-
-    # Copy files to output directory
-    for file in glob.glob(r"*.*"):
-        shutil.copy(file, args.output)
 
 
 def run(args, parser) -> None:
