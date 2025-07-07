@@ -15,6 +15,7 @@ from Whatsapp_Chat_Exporter.utility import APPLE_TIME, Crypt, check_update, DbTy
 from Whatsapp_Chat_Exporter.utility import readable_to_bytes, sanitize_filename
 from Whatsapp_Chat_Exporter.utility import import_from_json, bytes_to_readable
 from argparse import ArgumentParser, SUPPRESS
+from rich.progress import track
 from datetime import datetime
 from getpass import getpass
 from sys import exit
@@ -634,22 +635,20 @@ def export_multiple_json(args, data: Dict) -> None:
         os.makedirs(json_path, exist_ok=True)
     
     # Export each chat
-    total = len(data.keys())
-    for index, jik in enumerate(data.keys()):
+    chats = list(data.keys())
+    for jik in track(chats, description="Exporting chats"):
         if data[jik]["name"] is not None:
             contact = data[jik]["name"].replace('/', '')
         else:
             contact = jik.replace('+', '')
-            
+
         with open(f"{json_path}/{sanitize_filename(contact)}.json", "w") as f:
             file_content = json.dumps(
-                {jik: data[jik]}, 
-                ensure_ascii=not args.avoid_encoding_json, 
-                indent=args.pretty_print_json
+                {jik: data[jik]},
+                ensure_ascii=not args.avoid_encoding_json,
+                indent=args.pretty_print_json,
             )
             f.write(file_content)
-            print(f"Writing JSON file...({index + 1}/{total})", end="\r")
-    print()
 
 
 def process_exported_chat(args, data: ChatCollection) -> None:
@@ -674,26 +673,17 @@ def process_exported_chat(args, data: ChatCollection) -> None:
         shutil.copy(file, args.output)
 
 
-def main():
-    """Main function to run the WhatsApp Chat Exporter."""
-    # Set up and parse arguments
-    parser = setup_argument_parser()
-    args = parser.parse_args()
-    
-    # Check for updates
+def run(args, parser: ArgumentParser | None = None) -> None:
+    """Execute the export process using provided arguments."""
+    if parser is not None:
+        validate_args(parser, args)
+
     if args.check_update:
         exit(check_update())
-    
-    # Validate arguments
-    validate_args(parser, args)
-    
-    # Create output directory if it doesn't exist
+
     os.makedirs(args.output, exist_ok=True)
-    
-    # Initialize data collection
+
     data = ChatCollection()
-    
-    # Set up contact store for vCard enrichment if needed
     contact_store = setup_contact_store(args)
     
     if args.import_json:
@@ -769,3 +759,10 @@ def main():
         handle_media_directory(args)
 
         print("Everything is done!")
+
+
+def main() -> None:
+    """Entry point for console scripts."""
+    parser = setup_argument_parser()
+    args = parser.parse_args()
+    run(args, parser)
