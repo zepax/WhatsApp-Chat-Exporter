@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import io
 import os
 import sqlite3
 import shutil
@@ -12,6 +11,7 @@ import importlib.metadata
 import zipfile
 import tarfile
 import psutil
+from rich.progress import track
 from Whatsapp_Chat_Exporter import android_crypt, exported_handler, android_handler
 from Whatsapp_Chat_Exporter import ios_handler, ios_media_handler
 from Whatsapp_Chat_Exporter.data_model import ChatCollection, ChatStore
@@ -19,8 +19,11 @@ from Whatsapp_Chat_Exporter.utility import APPLE_TIME, Crypt, check_update, DbTy
 from Whatsapp_Chat_Exporter.utility import readable_to_bytes, sanitize_filename
 from Whatsapp_Chat_Exporter.utility import import_from_json, bytes_to_readable
 from Whatsapp_Chat_Exporter.utility import extract_archive
-from argparse import ArgumentParser, SUPPRESS
+from argparse import ArgumentParser
 import logging
+from datetime import datetime
+import sys
+from typing import List, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +34,8 @@ def setup_logging(verbose: bool = False) -> None:
     logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
 
 
-from datetime import datetime
-from getpass import getpass
-from sys import exit
-from typing import Optional, List, Dict
+# WhatsApp initial release timestamp (2009-01-01)
+WHATSAPP_LAUNCH_TS = 1009843200
 
 # Try to import vobject for contacts processing
 try:
@@ -62,9 +63,9 @@ def report_resource_usage(stage: str) -> None:
 def setup_argument_parser() -> ArgumentParser:
     """Set up and return the argument parser with all options."""
     try:
-        version = importlib.metadata.version("whatsapp_chat_exporter")
+        importlib.metadata.version("whatsapp_chat_exporter")
     except importlib.metadata.PackageNotFoundError:
-        version = "dev"
+        pass
 
     parser = ArgumentParser(
         description="A customizable Android and iOS/iPadOS WhatsApp database parser that "
@@ -256,7 +257,7 @@ def setup_argument_parser() -> ArgumentParser:
         dest="embedded",
         default=False,
         action="store_true",
-        help=SUPPRESS or "Embed media into HTML file (not yet implemented)",
+        help="Embed media into HTML file (not yet implemented)",
     )
     html_group.add_argument(
         "--offline",
@@ -294,6 +295,18 @@ def setup_argument_parser() -> ArgumentParser:
         default=False,
         action="store_true",
         help="Move the media directory to output directory if the flag is set, otherwise copy it",
+    )
+    media_group.add_argument(
+        "--skip-media",
+        dest="skip_media",
+        action="store_true",
+        help="Skip copying or moving the media directory",
+    )
+    media_group.add_argument(
+        "--cleanup-temp",
+        dest="cleanup_temp",
+        action="store_true",
+        help="Remove extracted temporary directories after use",
     )
     media_group.add_argument(
         "--create-separated-media",
@@ -436,10 +449,18 @@ def setup_argument_parser() -> ArgumentParser:
 def validate_args(parser: ArgumentParser, args) -> None:
     """Validate command line arguments and modify them if needed."""
     # Basic validation checks
-    if args.android and args.ios and args.exported and args.import_json:
-        parser.error("You must define only one device type.")
-    if not args.android and not args.ios and not args.exported and not args.import_json:
-        parser.error("You must define the device type.")
+    count = sum(
+        [
+            bool(args.android),
+            bool(args.ios),
+            bool(args.exported),
+            bool(args.import_json),
+        ]
+    )
+    if count != 1:
+        parser.error(
+            "You must specify exactly one mode: Android, iOS, exported chat, or import JSON."
+        )
     if args.no_html and not args.json and not args.text_format:
         parser.error(
             "You must either specify a JSON output file, text file output directory or enable HTML output."
@@ -546,7 +567,7 @@ def process_date_filter(parser: ArgumentParser, args) -> None:
         start = int(datetime.strptime(start, args.filter_date_format).timestamp())
         end = int(datetime.strptime(end, args.filter_date_format).timestamp())
 
-        if start < 1009843200 or end < 1009843200:
+        if start < WHATSAPP_LAUNCH_TS or end < WHATSAPP_LAUNCH_TS:
             parser.error("WhatsApp was first released in 2009...")
         if start > end:
             parser.error("The start date cannot be a moment after the end date.")
@@ -569,7 +590,7 @@ def process_single_date_filter(parser: ArgumentParser, args) -> None:
         datetime.strptime(args.filter_date[2:], args.filter_date_format).timestamp()
     )
 
-    if _timestamp < 1009843200:
+    if _timestamp < WHATSAPP_LAUNCH_TS:
         parser.error("WhatsApp was first released in 2009...")
 
     if args.filter_date[:2] == "> ":
@@ -597,7 +618,7 @@ def setup_contact_store(args) -> Optional["ContactsFromVCards"]:
                 "Read more on how to deal with enriching contacts:\n"
                 "https://github.com/KnugiHK/Whatsapp-Chat-Exporter/blob/main/README.md#usage"
             )
-            exit(1)
+            sys.exit(1)
         contact_store = ContactsFromVCards()
         contact_store.load_vcf_file(args.enrich_from_vcards, args.default_country_code)
         return contact_store
@@ -626,7 +647,6 @@ def decrypt_android_backup(args) -> int:
         return 1
 
     # Get key
-    keyfile_stream = False
     if not os.path.isfile(args.key) and all(
         char in string.hexdigits for char in args.key.replace(" ", "")
     ):
@@ -638,7 +658,6 @@ def decrypt_android_backup(args) -> int:
         except FileNotFoundError:
             logger.error("Key file not found at given path: %s", args.key)
             return 1
-        keyfile_stream = True
 
     # Read backup
     try:
@@ -660,11 +679,8 @@ def decrypt_android_backup(args) -> int:
             crypt,
             args.showkey,
             DbType.CONTACT,
-            keyfile_stream=keyfile_stream,
             max_worker=args.max_bruteforce_worker,
         )
-        if isinstance(key, io.IOBase):
-            key.seek(0)
 
     # Decrypt message database
     error_message = android_crypt.decrypt_backup(
@@ -674,7 +690,6 @@ def decrypt_android_backup(args) -> int:
         crypt,
         args.showkey,
         DbType.MESSAGE,
-        keyfile_stream=keyfile_stream,
         max_worker=args.max_bruteforce_worker,
     )
 
@@ -691,15 +706,15 @@ def handle_decrypt_error(error: int) -> None:
         logger.error(
             "Dependencies of decrypt_backup and/or extract_encrypted_key are not present. For details, see README.md."
         )
-        exit(3)
+        sys.exit(3)
     elif error == 2:
         logger.error(
             "Failed when decompressing the decrypted backup. Possibly incorrect offsets used in decryption."
         )
-        exit(4)
+        sys.exit(4)
     else:
         logger.error("Unknown error occurred. %s", error)
-        exit(5)
+        sys.exit(5)
 
 
 def auto_detect_backup(args, temp_dirs) -> None:
@@ -760,7 +775,7 @@ def process_messages(args, data: ChatCollection) -> None:
         logger.error(
             "The message database does not exist. You may specify the path to database file with option -d or check your provided path."
         )
-        exit(6)
+        sys.exit(6)
 
     filter_chat = (args.filter_chat_include, args.filter_chat_exclude)
 
@@ -1070,7 +1085,7 @@ def run(args, parser) -> None:
 
     # Check for updates
     if args.check_update:
-        exit(check_update(allow_network=True))
+        sys.exit(check_update(allow_network=True))
 
     # Validate arguments
     validate_args(parser, args)
