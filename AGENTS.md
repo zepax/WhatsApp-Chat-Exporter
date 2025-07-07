@@ -48,8 +48,6 @@ export/
 │   └── ...
 └── static/                     # CSS, fonts, resources
 
-```
-
 ---
 
 ## 🧪 Testing
