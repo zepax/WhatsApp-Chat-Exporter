@@ -5,6 +5,10 @@ import os
 import unicodedata
 import re
 import math
+import zipfile
+import tarfile
+import tempfile
+import shutil
 from bleach import clean as sanitize
 from markupsafe import Markup
 from datetime import datetime, timedelta
@@ -107,6 +111,34 @@ def readable_to_bytes(size_str: str) -> int:
     if unit not in SIZE_UNITS or not number.isnumeric():
         raise ValueError("Invalid input for size_str. Example: 1024GB")
     return int(number) * SIZE_UNITS[unit]
+
+
+def extract_archive(path: str) -> str:
+    """Extract a ZIP or TAR archive to a temporary directory.
+
+    Args:
+        path: Path to the archive file.
+
+    Returns:
+        Path to the extracted directory.
+
+    Raises:
+        ValueError: If the file format is not supported.
+    """
+    tmp_dir = tempfile.mkdtemp(prefix="wce_")
+
+    if zipfile.is_zipfile(path):
+        with zipfile.ZipFile(path) as zf:
+            zf.extractall(tmp_dir)
+    else:
+        try:
+            with tarfile.open(path) as tf:
+                tf.extractall(tmp_dir)
+        except tarfile.TarError as exc:
+            shutil.rmtree(tmp_dir)
+            raise ValueError("Unsupported archive format") from exc
+
+    return tmp_dir
 
 
 def sanitize_except(html: str) -> Markup:
