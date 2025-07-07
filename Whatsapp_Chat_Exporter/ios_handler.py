@@ -9,6 +9,7 @@ from mimetypes import MimeTypes
 from markupsafe import escape as htmle
 from rich.progress import track
 import sys
+import logging
 from Whatsapp_Chat_Exporter.data_model import ChatStore, Message
 from Whatsapp_Chat_Exporter.utility import (
     APPLE_TIME,
@@ -22,6 +23,8 @@ from Whatsapp_Chat_Exporter.utility import (
     Device,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def contacts(db, data):
     """Process WhatsApp contacts with status information."""
@@ -30,7 +33,7 @@ def contacts(db, data):
         """SELECT count() FROM ZWAADDRESSBOOKCONTACT WHERE ZABOUTTEXT IS NOT NULL"""
     )
     total_row_number = c.fetchone()[0]
-    print(f"Pre-processing contacts...({total_row_number})")
+    logger.info("Pre-processing contacts...(%s)", total_row_number)
 
     c.execute(
         """SELECT ZWHATSAPPID, ZABOUTTEXT FROM ZWAADDRESSBOOKCONTACT WHERE ZABOUTTEXT IS NOT NULL"""
@@ -115,7 +118,7 @@ def messages(
     """
     c.execute(contact_query)
     total_row_number = c.fetchone()[0]
-    print(f"Processing contacts...({total_row_number})")
+    logger.info("Processing contacts...(%s)", total_row_number)
 
     # Get distinct contacts
     contacts_query = f"""
