@@ -16,7 +16,15 @@ from Whatsapp_Chat_Exporter.utility import APPLE_TIME, Crypt, check_update, DbTy
 from Whatsapp_Chat_Exporter.utility import readable_to_bytes, sanitize_filename
 from Whatsapp_Chat_Exporter.utility import import_from_json, bytes_to_readable
 from argparse import ArgumentParser, SUPPRESS
-from rich.progress import track
+import logging
+
+logger = logging.getLogger(__name__)
+
+def setup_logging(verbose: bool = False) -> None:
+    """Configure basic logging."""
+    level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
+
 from datetime import datetime
 from getpass import getpass
 from sys import exit
@@ -53,10 +61,9 @@ def setup_argument_parser() -> ArgumentParser:
         description="A customizable Android and iOS/iPadOS WhatsApp database parser that "
         "will give you the history of your WhatsApp conversations in HTML "
         "and JSON. Android Backup Crypt12, Crypt14 and Crypt15 supported.",
-        epilog=(
-            f"WhatsApp Chat Exporter: {version} Licensed with MIT. See "
-            "https://wts.knugi.dev/docs?dest=osl for all open source licenses."
-        ),
+        epilog=f'WhatsApp Chat Exporter: {importlib.metadata.version("whatsapp_chat_exporter")} Licensed with MIT. See '
+        "https://wts.knugi.dev/docs?dest=osl for all open source licenses.",
+
     )
 
     # Device type arguments
@@ -174,7 +181,9 @@ def setup_argument_parser() -> ArgumentParser:
         default=False,
         action="store_true",
         help="Do not output html files",
+
     )
+
     output_group.add_argument(
         "--size",
         "--output-size",
@@ -185,16 +194,6 @@ def setup_argument_parser() -> ArgumentParser:
         default=None,
         help="Maximum (rough) size of a single output file in bytes, 0 for auto",
     )
-
-    output_group.add_argument(
-        "--summary",
-        dest="summary",
-        nargs="?",
-        default=None,
-        const="summary.json",
-        help="Output a summary JSON with message counts per chat",
-    )
-    
 
     # JSON formatting options
     json_group = parser.add_argument_group("JSON Options")
@@ -239,11 +238,7 @@ def setup_argument_parser() -> ArgumentParser:
     # HTML options
     html_group = parser.add_argument_group("HTML Options")
     html_group.add_argument(
-        "-t",
-        "--template",
-        dest="template",
-        default=None,
-        help="Path to custom HTML template",
+        "-t", "--template", dest="template", default=None, help="Path to custom HTML template"
     )
     html_group.add_argument(
         "--embedded",
@@ -253,10 +248,7 @@ def setup_argument_parser() -> ArgumentParser:
         help=SUPPRESS or "Embed media into HTML file (not yet implemented)",
     )
     html_group.add_argument(
-        "--offline",
-        dest="offline",
-        default=None,
-        help="Relative path to offline static files",
+        "--offline", dest="offline", default=None, help="Relative path to offline static files"
     )
     html_group.add_argument(
         "--no-avatar",
@@ -297,15 +289,6 @@ def setup_argument_parser() -> ArgumentParser:
         help="Create a copy of the media seperated per chat in <MEDIA>/separated/ directory",
     )
 
-    media_group.add_argument(
-        "--skip-media", dest="skip_media", default=False, action='store_true',
-        help="Skip copying or extracting media files"
-    )
-    media_group.add_argument(
-        "--cleanup-temp", dest="cleanup_temp", default=False, action='store_true',
-        help="Delete temporary files after processing"
-    )
-    
     # Filtering options
     filter_group = parser.add_argument_group("Filtering Options")
     filter_group.add_argument(
@@ -417,6 +400,14 @@ def setup_argument_parser() -> ArgumentParser:
         type=int,
         help="Specify the maximum number of worker for bruteforce decryption.",
     )
+    misc_group.add_argument(
+        "-v",
+        "--verbose",
+        dest="verbose",
+        default=False,
+        action="store_true",
+        help="Enable verbose logging",
+    )
 
     return parser
 
@@ -452,9 +443,8 @@ def validate_args(parser: ArgumentParser, args) -> None:
             or (not args.json.endswith(".json") and os.path.isfile(args.json))
         )
     ):
-        parser.error(
-            "When --per-chat is enabled, the destination of --json must be a directory."
-        )
+        parser.error("When --per-chat is enabled, the destination of --json must be a directory.")
+
 
     # vCards validation
     if args.enrich_from_vcards is not None and args.default_country_code is None:
@@ -479,10 +469,6 @@ def validate_args(parser: ArgumentParser, args) -> None:
     if args.filter_date is not None:
         process_date_filter(parser, args)
 
-    # Crypt15 key validation
-    if args.key is None and args.backup is not None and args.backup.endswith("crypt15"):
-        args.key = getpass("Enter your encryption key: ")
-
     # Theme validation
     if args.whatsapp_theme:
         args.template = "whatsapp_new.html"
@@ -493,6 +479,30 @@ def validate_args(parser: ArgumentParser, args) -> None:
 
     validate_chat_filters(parser, args.filter_chat_include)
     validate_chat_filters(parser, args.filter_chat_exclude)
+
+    def check_exists(path: Optional[str], description: str) -> None:
+        if path is not None and not os.path.exists(path):
+            parser.error(f"{description} not found at given path: {path}")
+
+    check_exists(args.exported, "Exported chat file")
+    check_exists(args.backup, "Backup file")
+    check_exists(args.db, "Database file")
+    check_exists(args.wa, "Contact database")
+    check_exists(args.wab, "Contact backup")
+    check_exists(args.call_db_ios, "Call database")
+
+    if (
+        args.backup
+        and any(c in args.backup for c in ("crypt12", "crypt14", "crypt15"))
+        and args.key is None
+    ):
+        parser.error("Encryption key needed for this backup; please provide --key")
+    if (
+        args.key
+        and not all(char in string.hexdigits for char in args.key.replace(" ", ""))
+        and not os.path.isfile(args.key)
+    ):
+        parser.error(f"Key file not found at given path: {args.key}")
 
 
 def validate_chat_filters(
@@ -530,13 +540,9 @@ def process_date_filter(parser: ArgumentParser, args) -> None:
 def process_single_date_filter(parser: ArgumentParser, args) -> None:
     """Process single date comparison filters."""
     if len(args.filter_date) < 3:
-        parser.error(
-            "Unsupported date format. See https://wts.knugi.dev/docs?dest=date"
-        )
+        parser.error("Unsupported date format. See https://wts.knugi.dev/docs?dest=date")
+    _timestamp = int(datetime.strptime(args.filter_date[2:], args.filter_date_format).timestamp())
 
-    _timestamp = int(
-        datetime.strptime(args.filter_date[2:], args.filter_date_format).timestamp()
-    )
 
     if _timestamp < 1009843200:
         parser.error("WhatsApp was first released in 2009...")
@@ -561,7 +567,7 @@ def setup_contact_store(args) -> Optional["ContactsFromVCards"]:
     """Set up and return a contact store if needed."""
     if args.enrich_from_vcards is not None:
         if not vcards_deps_installed:
-            print(
+            logger.error(
                 "You don't have the dependency to enrich contacts with vCard.\n"
                 "Read more on how to deal with enriching contacts:\n"
                 "https://github.com/KnugiHK/Whatsapp-Chat-Exporter/blob/main/README.md#usage"
@@ -576,10 +582,9 @@ def setup_contact_store(args) -> Optional["ContactsFromVCards"]:
 def decrypt_android_backup(args) -> int:
     """Decrypt Android backup files and return error code."""
     if args.key is None or args.backup is None:
-        print("You must specify the backup file with -b and a key with -k")
+        logger.error("You must specify the backup file with -b and a key with -k")
         return 1
-
-    print("Decryption key specified, decrypting WhatsApp backup...")
+    logger.info("Decryption key specified, decrypting WhatsApp backup...")
 
     # Determine crypt type
     if "crypt12" in args.backup:
@@ -589,9 +594,8 @@ def decrypt_android_backup(args) -> int:
     elif "crypt15" in args.backup:
         crypt = Crypt.CRYPT15
     else:
-        print(
-            "Unknown backup format. The backup file must be crypt12, crypt14 or crypt15."
-        )
+        logger.error("Unknown backup format. The backup file must be crypt12, crypt14 or crypt15.")
+
         return 1
 
     # Get key
@@ -601,11 +605,20 @@ def decrypt_android_backup(args) -> int:
     ):
         key = bytes.fromhex(args.key.replace(" ", ""))
     else:
-        key = open(args.key, "rb")
+        try:
+            key = open(args.key, "rb")
+        except FileNotFoundError:
+            logger.error("Key file not found at given path: %s", args.key)
+            return 1
         keyfile_stream = True
 
     # Read backup
-    db = open(args.backup, "rb").read()
+    try:
+        db = open(args.backup, "rb").read()
+    except FileNotFoundError:
+        logger.error("Backup file not found at given path: %s", args.backup)
+        return 1
+
 
     # Process WAB if provided
     error_wa = 0
@@ -641,31 +654,28 @@ def decrypt_android_backup(args) -> int:
         return error_wa
     return error_message
 
-
 def handle_decrypt_error(error: int) -> None:
     """Handle decryption errors with appropriate messages."""
     if error == 1:
-        print(
-            "Dependencies of decrypt_backup and/or extract_encrypted_key"
-            " are not present. For details, see README.md."
+
+        logger.error(
+            "Dependencies of decrypt_backup and/or extract_encrypted_key are not present. For details, see README.md."
         )
         exit(3)
     elif error == 2:
-        print(
-            "Failed when decompressing the decrypted backup. "
-            "Possibly incorrect offsets used in decryption."
+        logger.error(
+            "Failed when decompressing the decrypted backup. Possibly incorrect offsets used in decryption."
+
         )
         exit(4)
     else:
-        print("Unknown error occurred.", error)
+        logger.error("Unknown error occurred. %s", error)
         exit(5)
 
 
 def process_contacts(args, data: ChatCollection, contact_store=None) -> None:
-    """Process contacts from the database."""
-    contact_db = (
-        args.wa if args.wa else "wa.db" if args.android else "ContactsV2.sqlite"
-    )
+    contact_db = args.wa if args.wa else "wa.db" if args.android else "ContactsV2.sqlite"
+
 
     if os.path.isfile(contact_db):
         with sqlite3.connect(contact_db) as db:
@@ -678,16 +688,12 @@ def process_contacts(args, data: ChatCollection, contact_store=None) -> None:
 
 def process_messages(args, data: ChatCollection) -> None:
     """Process messages, media and vcards from the database."""
-    msg_db = (
-        args.db
-        if args.db
-        else "msgstore.db" if args.android else args.identifiers.MESSAGE
-    )
+    msg_db = args.db if args.db else "msgstore.db" if args.android else args.identifiers.MESSAGE
+
 
     if not os.path.isfile(msg_db):
-        print(
-            "The message database does not exist. You may specify the path "
-            "to database file with option -d or check your provided path."
+        logger.error(
+            "The message database does not exist. You may specify the path to database file with option -d or check your provided path."
         )
         exit(6)
 
@@ -751,23 +757,20 @@ def handle_media_directory(args) -> None:
         media_path = os.path.join(args.output, args.media)
 
         if os.path.isdir(media_path):
-            print(
-                "\nWhatsApp directory already exists in output directory. Skipping...",
-                end="\n",
-            )
+            logger.info("WhatsApp directory already exists in output directory. Skipping...")
+
         else:
             if args.move_media:
                 try:
-                    print("\nMoving media directory...", end="\n")
+                    logger.info("Moving media directory...")
                     shutil.move(args.media, f"{args.output}/")
                 except PermissionError:
-                    print(
-                        "\nCannot remove original WhatsApp directory. "
-                        "Perhaps the directory is opened?",
-                        end="\n",
+                    logger.error(
+                        "Cannot remove original WhatsApp directory. Perhaps the directory is opened?"
+
                     )
             else:
-                print("\nCopying media directory...", end="\n")
+                logger.info("Copying media directory...")
                 shutil.copytree(args.media, media_path)
         if args.cleanup_temp and not args.move_media:
             shutil.rmtree(args.media, ignore_errors=True)
@@ -795,7 +798,7 @@ def create_output_files(args, data: ChatCollection, contact_store=None) -> None:
 
     # Create text files if requested
     if args.text_format:
-        print("Writing text file...")
+        logger.info("Writing text file...")
         android_handler.create_txt(data, args.text_format)
 
     # Create JSON files if requested
@@ -831,11 +834,9 @@ def export_single_json(args, data: Dict) -> None:
     """Export data to a single JSON file."""
     with open(args.json, "w") as f:
         json_data = json.dumps(
-            data,
-            ensure_ascii=not args.avoid_encoding_json,
-            indent=args.pretty_print_json,
+            data, ensure_ascii=not args.avoid_encoding_json, indent=args.pretty_print_json
         )
-        print(f"\nWriting JSON file...({bytes_to_readable(len(json_data))})")
+        logger.info("Writing JSON file...(%s)", bytes_to_readable(len(json_data)))
         f.write(json_data)
 
 
@@ -891,24 +892,8 @@ def export_multiple_json(args, data: Dict) -> None:
                 indent=args.pretty_print_json,
             )
             f.write(file_content)
-
-
-def export_summary(args, data: ChatCollection) -> None:
-    """Export a JSON summary containing message counts for each chat."""
-    summary = {
-        "total_chats": len(data),
-        "chats": {},
-    }
-
-    for jid, chat in data.items():
-        summary["chats"][jid] = {
-            "name": chat.name,
-            "message_count": len(chat),
-        }
-
-    with open(args.summary, "w") as f:
-        json.dump(summary, f, ensure_ascii=False, indent=2)
-
+            logger.info("Writing JSON file...(%d/%d)", index + 1, total)
+    logger.info("")
 
 def process_exported_chat(args, data: ChatCollection) -> None:
     """Process an exported chat file."""
@@ -931,23 +916,27 @@ def process_exported_chat(args, data: ChatCollection) -> None:
     for file in glob.glob(r"*.*"):
         shutil.copy(file, args.output)
 
+def main():
+    """Main function to run the WhatsApp Chat Exporter."""
+    # Set up and parse arguments
+    parser = setup_argument_parser()
+    args = parser.parse_args()
+    setup_logging(args.verbose)
 
-def run(args, parser: ArgumentParser | None = None) -> None:
-    """Execute the export process using provided arguments."""
-    if parser is not None:
-        validate_args(parser, args)
-
+    # Check for updates
     if args.check_update:
         exit(check_update())
-    
+
     # Validate arguments
     validate_args(parser, args)
-    report_resource_usage("Initial")
-    
+
     # Create output directory if it doesn't exist
     os.makedirs(args.output, exist_ok=True)
 
+    # Initialize data collection
     data = ChatCollection()
+
+    # Set up contact store for vCard enrichment if needed
     contact_store = setup_contact_store(args)
 
     if args.import_json:
@@ -1008,7 +997,7 @@ def run(args, parser: ArgumentParser | None = None) -> None:
                         args.backup, identifiers, args.decrypt_chunk_size
                     )
                 else:
-                    print(
+                    logger.info(
                         "WhatsApp directory already exists, skipping WhatsApp file extraction."
                     )
 
@@ -1023,8 +1012,7 @@ def run(args, parser: ArgumentParser | None = None) -> None:
 
         # Process messages, media, and calls
         process_messages(args, data)
-        report_resource_usage("After messages")
-        
+
         # Create output files
         create_output_files(args, data, contact_store)
 
@@ -1039,6 +1027,6 @@ def main() -> None:
     parser = setup_argument_parser()
     args = parser.parse_args()
     run(args, parser)
-
         report_resource_usage("Final")
+        logger.info("Everything is done!")
 
