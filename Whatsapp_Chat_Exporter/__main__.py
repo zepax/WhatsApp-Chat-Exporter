@@ -668,6 +668,36 @@ def handle_decrypt_error(error: int) -> None:
         exit(5)
 
 
+def auto_detect_backup(args, temp_dirs) -> None:
+    """Auto-detect backup type and adjust args accordingly."""
+    if args.android or args.ios or args.exported or args.import_json:
+        return
+    if args.backup:
+        path = args.backup
+        if os.path.isfile(path) and (zipfile.is_zipfile(path) or tarfile.is_tarfile(path)):
+            path = extract_archive(path)
+            temp_dirs.append(path)
+        lower = os.path.basename(path).lower()
+        if lower.endswith((".crypt12", ".crypt14", ".crypt15")):
+            args.android = True
+            args.backup = path
+            return
+        if os.path.isdir(path) and os.path.isfile(os.path.join(path, "Manifest.db")):
+            args.ios = True
+            args.backup = path
+            return
+        if lower.startswith("msgstore"):
+            args.android = True
+        elif lower.startswith("chatstorage"):
+            args.ios = True
+    elif args.db and not (args.android or args.ios):
+        name = os.path.basename(args.db).lower()
+        if "msgstore" in name:
+            args.android = True
+        elif "chatstorage" in name:
+            args.ios = True
+
+
 def process_contacts(args, data: ChatCollection, contact_store=None) -> None:
     contact_db = args.wa if args.wa else "wa.db" if args.android else "ContactsV2.sqlite"
 
@@ -929,6 +959,8 @@ def process_exported_chat(args, data: ChatCollection) -> None:
 def run(args, parser) -> None:
     """Execute the export process with parsed arguments."""
     temp_dirs: List[str] = []
+
+    auto_detect_backup(args, temp_dirs)
 
     # Check for updates
     if args.check_update:
