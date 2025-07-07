@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.7.0"]
+build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "whatsapp-chat-exporter"
@@ -35,11 +35,11 @@ requires-python = ">=3.11"
 dependencies = [
     "jinja2",
     "bleach",
-    "phonenumbers",
     "typer",
     "rich",
-    "pydantic>=2"
-
+    "pydantic>=2",
+    "psutil",
+    "markupsafe"
 ]
 
 [project.optional-dependencies]
@@ -51,6 +51,7 @@ all = ["pycryptodome", "javaobj-py3", "vobject", "phonenumbers"]
 everything = ["pycryptodome", "javaobj-py3", "vobject", "phonenumbers"]
 backup = ["pycryptodome", "javaobj-py3"]
 vcards = ["vobject", "pycryptodome", "javaobj-py3", "phonenumbers"]
+ios_encrypted = ["iphone_backup_decrypt"]
 
 [project.scripts]
 wtsexporter = "Whatsapp_Chat_Exporter.cli:app"
@@ -63,3 +64,48 @@ include = ["Whatsapp_Chat_Exporter"]
 
 [tool.setuptools.package-data]
 Whatsapp_Chat_Exporter = ["*.html"]
+
+[tool.poetry]
+name = "whatsapp-chat-exporter"
+version = "0.12.0"
+description = "A Whatsapp database parser that provides history of your Whatsapp conversations in HTML and JSON. Android, iOS, iPadOS, Crypt12, Crypt14, Crypt15 supported."
+readme = "README.md"
+authors = ["KnugiHK <hello@knugi.com>"]
+license = "MIT"
+packages = [{ include = "Whatsapp_Chat_Exporter" }]
+include = ["Whatsapp_Chat_Exporter/*.html"]
+
+[tool.poetry.dependencies]
+python = ">=3.11"
+jinja2 = "*"
+bleach = "*"
+typer = "*"
+rich = "*"
+pydantic = ">=2"
+psutil = "*"
+markupsafe = "*"
+
+[tool.poetry.extras]
+android_backup = ["pycryptodome", "javaobj-py3"]
+crypt12 = ["pycryptodome"]
+crypt14 = ["pycryptodome"]
+crypt15 = ["pycryptodome", "javaobj-py3"]
+all = ["pycryptodome", "javaobj-py3", "vobject", "phonenumbers"]
+everything = ["pycryptodome", "javaobj-py3", "vobject", "phonenumbers"]
+backup = ["pycryptodome", "javaobj-py3"]
+vcards = ["vobject", "pycryptodome", "javaobj-py3", "phonenumbers"]
+ios_encrypted = ["iphone_backup_decrypt"]
+
+[tool.poetry.scripts]
+wtsexporter = "Whatsapp_Chat_Exporter.cli:app"
+waexporter = "Whatsapp_Chat_Exporter.cli:app"
+whatsapp-chat-exporter = "Whatsapp_Chat_Exporter.cli:app"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-asyncio = "*"
+black = "*"
+ruff = "*"
+mypy = "*"
+mkdocs = "*"
+
