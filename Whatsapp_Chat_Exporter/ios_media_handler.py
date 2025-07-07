@@ -5,6 +5,8 @@ import sqlite3
 import os
 import getpass
 from sys import exit
+import sys
+from rich.progress import track, Progress
 from Whatsapp_Chat_Exporter.utility import WhatsAppIdentifier
 from Whatsapp_Chat_Exporter.bplist import BPListReader
 try:
@@ -114,18 +116,28 @@ class BackupExtractor:
     
     def _extract_decrypted_files(self):
         """Extract all WhatsApp files after decryption"""
+
+        progress = Progress(transient=True, disable=not sys.stdout.isatty())
+        task_id = None
+
         def extract_progress_handler(file_id, domain, relative_path, n, total_files):
-            if n % 100 == 0:
-                print(f"Decrypting and extracting files...({n}/{total_files})", end="\r")   
+            nonlocal task_id
+            if task_id is None:
+                task_id = progress.add_task(
+                    "Decrypting and extracting files", total=total_files
+                )
+            progress.update(task_id, completed=n)
             return True
 
-        self.backup.extract_files(
-            domain_like=self.identifiers.DOMAIN,
-            output_folder=self.identifiers.DOMAIN,
-            preserve_folders=True,
-            filter_callback=extract_progress_handler
-        )
-        print(f"All required files are decrypted and extracted.          ", end="\n")
+        with progress:
+            self.backup.extract_files(
+                domain_like=self.identifiers.DOMAIN,
+                output_folder=self.identifiers.DOMAIN,
+                preserve_folders=True,
+                filter_callback=extract_progress_handler,
+            )
+        if not progress.disable:
+            progress.console.print("All required files are decrypted and extracted.")
 
     def _extract_unencrypted_backup(self):
         """
@@ -176,7 +188,6 @@ class BackupExtractor:
             c = manifest.cursor()
             c.execute(f"SELECT count() FROM Files WHERE domain = '{_wts_id}'")
             total_row_number = c.fetchone()[0]
-            print(f"Extracting WhatsApp files...(0/{total_row_number})", end="\r")
             c.execute(
                 f"""
                 SELECT fileID, relativePath, flags, file AS metadata,
@@ -190,7 +201,14 @@ class BackupExtractor:
                 os.mkdir(_wts_id)
 
             row = c.fetchone()
-            while row is not None:
+            for _ in track(
+                range(total_row_number),
+                description="Extracting WhatsApp files",
+                transient=True,
+                disable=not sys.stdout.isatty(),
+            ):
+                if row is None:
+                    break
                 if not row["relativePath"]:  # Skip empty relative paths
                     row = c.fetchone()
                     continue
@@ -212,10 +230,7 @@ class BackupExtractor:
                     modification = metadata["$objects"][1]["LastModified"]
                     os.utime(destination, (modification, modification))
 
-                if row["_index"] % 100 == 0:
-                    print(f"Extracting WhatsApp files...({row['_index']}/{total_row_number})", end="\r")
                 row = c.fetchone()
-            print(f"Extracting WhatsApp files...({total_row_number}/{total_row_number})", end="\n")
 
 
 def extract_media(base_dir, identifiers, decrypt_chunk_size):
