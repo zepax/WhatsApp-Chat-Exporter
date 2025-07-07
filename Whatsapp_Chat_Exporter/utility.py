@@ -136,7 +136,16 @@ def extract_archive(path: str) -> str:
     else:
         try:
             with tarfile.open(path) as tf:
-                tf.extractall(tmp_dir)
+                members = []
+                for member in tf.getmembers():
+                    target = os.path.normpath(os.path.join(tmp_dir, member.name))
+                    if not target.startswith(os.path.abspath(tmp_dir) + os.sep):
+                        shutil.rmtree(tmp_dir)
+                        raise ValueError(
+                            f"Unsafe path detected in archive: {member.name}"
+                        )
+                    members.append(member)
+                tf.extractall(tmp_dir, members=members)
         except tarfile.TarError as exc:
             shutil.rmtree(tmp_dir)
             raise ValueError("Unsupported archive format") from exc
