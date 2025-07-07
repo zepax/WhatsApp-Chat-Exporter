@@ -158,7 +158,8 @@ class ChatStore:
         Args:
             type (str): Device type (IOS or ANDROID)
             name (Optional[str]): Chat name
-            media (Optional[str]): Path to media folder
+            media (Optional[str]): Path to WhatsApp folder containing the Media
+                directory
         
         Raises:
             TypeError: If name is not a string or None
@@ -171,9 +172,12 @@ class ChatStore:
         if media is not None:
             from Whatsapp_Chat_Exporter.utility import Device
             if self.type == Device.IOS:
-                self.my_avatar = os.path.join(media, "Media/Profile/Photo.jpg")
+                self.my_avatar = os.path.join(media, "Media", "Profile",
+                                             "Photo.jpg")
             elif self.type == Device.ANDROID:
-                self.my_avatar = None  # TODO: Add Android support
+                self.my_avatar = os.path.join(
+                    media, "Media", "WhatsApp Profile Photos", "me.jpg"
+                )
             else:
                 self.my_avatar = None
         else:
