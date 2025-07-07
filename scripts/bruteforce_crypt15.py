@@ -27,8 +27,11 @@ def _extract_encrypted_key(keyfile):
     return _generate_hmac_of_hmac(key_stream)
 
 
-key = open("encrypted_backup.key", "rb").read()
-database = open("wa.db.crypt15", "rb").read()
+with open("encrypted_backup.key", "rb") as f:
+    key = f.read()
+
+with open("wa.db.crypt15", "rb") as f:
+    database = f.read()
 main_key, hex_key = _extract_encrypted_key(key)
 for i in range(100):
     iv = database[i:i+16]
