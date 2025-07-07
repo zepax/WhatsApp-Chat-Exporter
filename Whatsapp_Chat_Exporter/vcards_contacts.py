@@ -82,5 +82,7 @@ def normalize_number(number: str, country_code: str) -> str:
 
     if number.startswith("0"):
         number = number[1:]
+        if not country_code:
+            return number
 
     return country_code + number
