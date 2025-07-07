@@ -4,6 +4,7 @@ import os
 import shutil
 from glob import glob
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 from mimetypes import MimeTypes
 from markupsafe import escape as htmle
 from rich.progress import track
@@ -343,8 +344,8 @@ def media(
     db, data, media_folder, filter_date, filter_chat, filter_empty, separate_media=False
 ):
     """Process media files from WhatsApp messages."""
-    c = db.cursor()
 
+    c = db.cursor()
     # Build filter conditions
     chat_filter_include = get_chat_condition(
         filter_chat[0],
@@ -413,8 +414,15 @@ def media(
         process_media_item(content, data, media_folder, mime, separate_media)
         content = c.fetchone()
 
-
-def process_media_item(content, data, media_folder, mime, separate_media):
+def process_media_item(
+    content,
+    data,
+    media_folder,
+    mime,
+    separate_media,
+    executor=None,
+    tasks=None,
+):
     """Process a single media item."""
     file_path = f"{media_folder}/Message/{content['ZMEDIALOCALPATH']}"
     current_chat = data.get_chat(content["ZCONTACTJID"])
