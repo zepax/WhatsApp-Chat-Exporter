@@ -5,6 +5,10 @@ import os
 import unicodedata
 import re
 import math
+import zipfile
+import tarfile
+import tempfile
+import shutil
 from bleach import clean as sanitize
 from markupsafe import Markup
 from datetime import datetime, timedelta
@@ -107,6 +111,34 @@ def readable_to_bytes(size_str: str) -> int:
     if unit not in SIZE_UNITS or not number.isnumeric():
         raise ValueError("Invalid input for size_str. Example: 1024GB")
     return int(number) * SIZE_UNITS[unit]
+
+
+def extract_archive(path: str) -> str:
+    """Extract a ZIP or TAR archive to a temporary directory.
+
+    Args:
+        path: Path to the archive file.
+
+    Returns:
+        Path to the extracted directory.
+
+    Raises:
+        ValueError: If the file format is not supported.
+    """
+    tmp_dir = tempfile.mkdtemp(prefix="wce_")
+
+    if zipfile.is_zipfile(path):
+        with zipfile.ZipFile(path) as zf:
+            zf.extractall(tmp_dir)
+    else:
+        try:
+            with tarfile.open(path) as tf:
+                tf.extractall(tmp_dir)
+        except tarfile.TarError as exc:
+            shutil.rmtree(tmp_dir)
+            raise ValueError("Unsupported archive format") from exc
+
+    return tmp_dir
 
 
 def sanitize_except(html: str) -> Markup:
@@ -534,6 +566,19 @@ def slugify(value: str, allow_unicode: bool = False) -> str:
         value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
     value = re.sub(r'[^\w\s-]', '', value.lower())
     return re.sub(r'[-\s]+', '-', value).strip('-_')
+
+
+def copy_parallel(file_pairs: List[Tuple[str, str]], workers: int = 4) -> None:
+    """Copy multiple files concurrently.
+
+    Args:
+        file_pairs: List of ``(src, dst)`` tuples.
+        workers: Maximum number of concurrent threads.
+    """
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        tasks = [executor.submit(shutil.copy2, src, dst) for src, dst in file_pairs]
+        for task in tasks:
+            task.result()
 
 
 class WhatsAppIdentifier(StrEnum):
