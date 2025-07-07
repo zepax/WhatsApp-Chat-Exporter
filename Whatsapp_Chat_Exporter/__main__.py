@@ -1004,7 +1004,18 @@ def copy_exported_media(chat_file: str, data: ChatCollection, output_dir: str) -
                 rel_path = os.path.relpath(msg.data, src_dir)
             except ValueError:
                 continue
-            dst = os.path.join(media_dir, rel_path)
+
+            rel_path = os.path.normpath(rel_path)
+            if os.path.isabs(rel_path) or rel_path.startswith(".."):
+                logger.warning("Skipping unsafe media path: %s", msg.data)
+                continue
+
+            dst = os.path.normpath(os.path.join(media_dir, rel_path))
+            media_abs = os.path.abspath(media_dir) + os.sep
+            if not os.path.abspath(dst).startswith(media_abs):
+                logger.warning("Skipping media outside destination: %s", rel_path)
+                continue
+
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy2(msg.data, dst)
             msg.data = os.path.relpath(dst, output_dir)
