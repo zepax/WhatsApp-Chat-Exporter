@@ -26,14 +26,16 @@ def test_handle_media_skip(monkeypatch, tmp_path):
 
     monkeypatch.setattr(shutil, "copytree", fake_copy)
     monkeypatch.setattr(shutil, "move", fake_move)
-
     handle_media_directory(args, [str(tmp_path)])
+
     assert not called["copy"]
     assert not called["move"]
 
 
-def test_handle_media_cleanup(monkeypatch, tmp_path):
-    media = tmp_path / "media"
+def test_handle_media_cleanup_inside_temp(monkeypatch, tmp_path):
+    media_root = tmp_path / "temp"
+    media_root.mkdir()
+    media = media_root / "media"
     out = tmp_path / "out"
     media.mkdir()
     out.mkdir()
@@ -49,7 +51,6 @@ def test_handle_media_cleanup(monkeypatch, tmp_path):
         os.makedirs(dst, exist_ok=True)
 
     monkeypatch.setattr(shutil, "copytree", fake_copy)
-
     handle_media_directory(args, [str(tmp_path)])
     assert not media.exists()
 
