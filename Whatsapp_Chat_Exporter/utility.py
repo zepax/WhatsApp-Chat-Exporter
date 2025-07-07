@@ -6,6 +6,7 @@ import unicodedata
 import re
 import math
 import shutil
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from bleach import clean as sanitize
 from markupsafe import Markup
@@ -13,6 +14,7 @@ from datetime import datetime, timedelta
 from enum import IntEnum
 from Whatsapp_Chat_Exporter.data_model import ChatStore
 from typing import Dict, List, Optional, Tuple
+from rich.progress import track
 try:
     from enum import StrEnum, IntEnum
 except ImportError:
@@ -271,8 +273,13 @@ def import_from_json(json_file: str, data: Dict[str, ChatStore]):
     with open(json_file, "r", encoding="utf-8") as f:
         temp_data = json.load(f)
     total_row_number = len(temp_data)
-    print(f"Importing chats from JSON...(0/{total_row_number})", end="\r")
-    for index, (jid, chat_data) in enumerate(temp_data.items(), 1):
+    for index, (jid, chat_data) in track(
+        enumerate(temp_data.items(), 1),
+        total=total_row_number,
+        description="Importing chats from JSON",
+        transient=True,
+        disable=not sys.stdout.isatty(),
+    ):
         chat = ChatStore(chat_data.get("type"), chat_data.get("name"))
         chat.my_avatar = chat_data.get("my_avatar")
         chat.their_avatar = chat_data.get("their_avatar")
@@ -300,7 +307,6 @@ def import_from_json(json_file: str, data: Dict[str, ChatStore]):
             message.sticker = msg.get("sticker")
             chat.add_message(id, message)
         data[jid] = chat
-        print(f"Importing chats from JSON...({index}/{total_row_number})", end="\r")
 
 
 def sanitize_filename(file_name: str) -> str:

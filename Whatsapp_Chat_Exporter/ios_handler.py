@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from mimetypes import MimeTypes
 from markupsafe import escape as htmle
 from rich.progress import track
+import sys
 from Whatsapp_Chat_Exporter.data_model import ChatStore, Message
 from Whatsapp_Chat_Exporter.utility import (
     APPLE_TIME,
@@ -530,16 +531,19 @@ def vcard(db, data, media_folder, filter_date, filter_chat, filter_empty):
     c.execute(vcard_query)
     contents = c.fetchall()
     total_row_number = len(contents)
-    print(f"\nProcessing vCards...(0/{total_row_number})", end="\r")
 
     # Create vCards directory
     path = f"{media_folder}/Message/vCards"
     Path(path).mkdir(parents=True, exist_ok=True)
 
-    # Process each vCard
-    for index, content in enumerate(contents):
+    # Process each vCard with progress bar
+    for content in track(
+        contents,
+        description="Processing vCards",
+        transient=True,
+        disable=not sys.stdout.isatty(),
+    ):
         process_vcard_item(content, path, data)
-        print(f"Processing vCards...({index + 1}/{total_row_number})", end="\r")
 
 
 def process_vcard_item(content, path, data):
@@ -602,8 +606,6 @@ def calls(db, data, timezone_offset, filter_chat):
     if total_row_number == 0:
         return
 
-    print(f"\nProcessing calls...({total_row_number})", end="\r")
-
     # Fetch call records
     calls_query = f"""
         SELECT ZCALLIDSTRING,
@@ -628,9 +630,16 @@ def calls(db, data, timezone_offset, filter_chat):
     # Create calls chat
     chat = ChatStore(Device.ANDROID, "WhatsApp Calls")
 
-    # Process each call
+    # Process each call with progress bar
     content = c.fetchone()
-    while content is not None:
+    for _ in track(
+        range(total_row_number),
+        description="Processing calls",
+        transient=True,
+        disable=not sys.stdout.isatty(),
+    ):
+        if content is None:
+            break
         process_call_record(content, chat, data, timezone_offset)
         content = c.fetchone()
 

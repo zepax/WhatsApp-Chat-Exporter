@@ -4,6 +4,8 @@ import os
 from datetime import datetime
 from mimetypes import MimeTypes
 from typing import Tuple
+import sys
+from rich.progress import track
 
 from Whatsapp_Chat_Exporter.data_model import ChatStore, Message
 from Whatsapp_Chat_Exporter.utility import Device
@@ -34,7 +36,13 @@ def messages(path, data, assume_first_as_me=False, prompt_user=False):
     with open(path, "r", encoding="utf8") as file:
         total_row_number = sum(1 for _ in file)
         file.seek(0)
-        for index, line in enumerate(file):
+        for index, line in track(
+            enumerate(file),
+            total=total_row_number,
+            description="Processing messages & media",
+            transient=True,
+            disable=not sys.stdout.isatty(),
+        ):
             you, user_identification_done = process_line(
                 line,
                 index,
@@ -46,14 +54,6 @@ def messages(path, data, assume_first_as_me=False, prompt_user=False):
                 prompt_user,
             )
 
-            # Show progress
-            if index % 1000 == 0:
-                print(
-                    f"Processing messages & media...({index}/{total_row_number})",
-                    end="\r",
-                )
-
-    print(f"Processing messages & media...({total_row_number}/{total_row_number})")
     return data
 
 
