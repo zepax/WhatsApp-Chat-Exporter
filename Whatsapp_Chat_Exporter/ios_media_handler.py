@@ -9,6 +9,9 @@ import sys
 from rich.progress import track, Progress
 from Whatsapp_Chat_Exporter.utility import WhatsAppIdentifier
 from Whatsapp_Chat_Exporter.bplist import BPListReader
+import logging
+
+logger = logging.getLogger(__name__)
 try:
     from iphone_backup_decrypt import EncryptedBackup, RelativePath
 except ModuleNotFoundError:
@@ -59,12 +62,16 @@ class BackupExtractor:
         Handles the extraction of data from an encrypted iOS backup.
         """
         if not support_encrypted:
-            print("You don't have the dependencies to handle encrypted backup.")
-            print("Read more on how to deal with encrypted backup:")
-            print("https://github.com/KnugiHK/Whatsapp-Chat-Exporter/blob/main/README.md#usage")
+            logger.error(
+                "You don't have the dependencies to handle encrypted backup."
+            )
+            logger.error("Read more on how to deal with encrypted backup:")
+            logger.error(
+                "https://github.com/KnugiHK/Whatsapp-Chat-Exporter/blob/main/README.md#usage"
+            )
             return
 
-        print("Encryption detected on the backup!")
+        logger.info("Encryption detected on the backup!")
         password = getpass.getpass("Enter the password for the backup:")
         self._decrypt_backup(password)
         self._extract_decrypted_files()
@@ -76,7 +83,7 @@ class BackupExtractor:
         Args:
             password (str): The password for the encrypted backup.
         """
-        print("Trying to decrypt the iOS backup...", end="")
+        logger.info("Trying to decrypt the iOS backup...")
         self.backup = EncryptedBackup(
             backup_directory=self.base_dir,
             passphrase=password,
@@ -84,7 +91,7 @@ class BackupExtractor:
             check_same_thread=False,
             decrypt_chunk_size=self.decrypt_chunk_size,
         )
-        print("Done\nDecrypting WhatsApp database...", end="")
+        logger.info("Done decrypting WhatsApp database...")
         try:
             self.backup.extract_file(
                 relative_path=RelativePath.WHATSAPP_MESSAGES,
@@ -102,17 +109,17 @@ class BackupExtractor:
                 output_filename=self.identifiers.CALL,
             )
         except ValueError:
-            print("Failed to decrypt backup: incorrect password?")
+            logger.error("Failed to decrypt backup: incorrect password?")
             exit(7)
         except FileNotFoundError:
-            print(
+            logger.error(
                 "Essential WhatsApp files are missing from the iOS backup. "
                 "Perhapse you enabled end-to-end encryption for the backup? "
                 "See https://wts.knugi.dev/docs.html?dest=iose2e"
             )
             exit(6)
         else:
-            print("Done")
+            logger.info("Done")
     
     def _extract_decrypted_files(self):
         """Extract all WhatsApp files after decryption"""
@@ -156,10 +163,10 @@ class BackupExtractor:
 
         if not os.path.isfile(wts_db_path):
             if self.identifiers is WhatsAppIdentifier:
-                print("WhatsApp database not found.")
+                logger.error("WhatsApp database not found.")
             else:
-                print("WhatsApp Business database not found.")
-            print(
+                logger.error("WhatsApp Business database not found.")
+            logger.error(
                 "Essential WhatsApp files are missing from the iOS backup. "
                 "Perhapse you enabled end-to-end encryption for the backup? "
                 "See https://wts.knugi.dev/docs.html?dest=iose2e"
@@ -169,12 +176,12 @@ class BackupExtractor:
             shutil.copyfile(wts_db_path, self.identifiers.MESSAGE)
 
         if not os.path.isfile(contact_db_path):
-            print("Contact database not found. Skipping...")
+            logger.warning("Contact database not found. Skipping...")
         else:
             shutil.copyfile(contact_db_path, self.identifiers.CONTACT)
 
         if not os.path.isfile(call_db_path):
-            print("Call database not found. Skipping...")
+            logger.warning("Call database not found. Skipping...")
         else:
             shutil.copyfile(call_db_path, self.identifiers.CALL)
 
