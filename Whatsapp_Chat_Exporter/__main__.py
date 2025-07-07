@@ -6,7 +6,6 @@ import sqlite3
 import shutil
 import json
 import string
-import glob
 import importlib.metadata
 import zipfile
 import tarfile
@@ -992,6 +991,37 @@ def export_summary(args, data: ChatCollection) -> None:
         json.dump(summary, f, indent=2)
 
 
+def copy_exported_media(chat_file: str, data: ChatCollection, output_dir: str) -> None:
+    """Copy media referenced in an exported chat.
+
+    Args:
+        chat_file: Path to the exported chat file.
+        data: Collection that contains the parsed chat.
+        output_dir: Destination folder for the media files.
+    """
+    src_dir = os.path.dirname(chat_file)
+    chat = data.get_chat("ExportedChat")
+    if chat is None:
+        return
+
+    media_dir = os.path.join(output_dir, "media")
+    os.makedirs(media_dir, exist_ok=True)
+
+    for msg in chat.values():
+        if msg.media and isinstance(msg.data, str) and os.path.isfile(msg.data):
+            try:
+                rel_path = os.path.relpath(msg.data, src_dir)
+            except ValueError:
+                continue
+            dst = os.path.join(media_dir, rel_path)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(msg.data, dst)
+            msg.data = os.path.relpath(dst, output_dir)
+
+    if chat.media_base == "":
+        chat.media_base = "media/"
+
+
 def process_exported_chat(args, data: ChatCollection) -> None:
     """Process an exported chat file."""
     exported_handler.messages(
@@ -1000,6 +1030,8 @@ def process_exported_chat(args, data: ChatCollection) -> None:
         args.assume_first_as_me,
         args.prompt_user,
     )
+
+    copy_exported_media(args.exported, data, args.output)
 
     if not args.no_html:
         android_handler.create_html(
@@ -1013,10 +1045,6 @@ def process_exported_chat(args, data: ChatCollection) -> None:
             args.whatsapp_theme,
             args.headline,
         )
-
-    # Copy files to output directory
-    for file in glob.glob(r"*.*"):
-        shutil.copy(file, args.output)
 
 
 def run(args, parser) -> None:
