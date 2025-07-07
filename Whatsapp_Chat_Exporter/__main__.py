@@ -46,10 +46,15 @@ else:
 
 
 def report_resource_usage(stage: str) -> None:
-    """Print memory and disk usage statistics."""
+    """Log memory and disk usage statistics."""
     mem = psutil.virtual_memory()
     disk = psutil.disk_usage(".")
-    print(f"[{stage}] Memory: {mem.percent:.1f}% used, Disk: {disk.percent:.1f}% used")
+    logger.info(
+        "[%s] Memory: %.1f%% used, Disk: %.1f%% used",
+        stage,
+        mem.percent,
+        disk.percent,
+    )
 
 
 def setup_argument_parser() -> ArgumentParser:
@@ -826,7 +831,7 @@ def handle_media_directory(args, temp_dirs) -> None:
         temp_dirs: List of temporary directories created during execution.
     """
     if args.skip_media:
-        print("\nSkipping media directory as per --skip-media", end="\n")
+        logger.info("Skipping media directory as per --skip-media")
         return
     if os.path.isdir(args.media):
         dest_name = os.path.basename(args.media.rstrip(os.sep))
@@ -1170,7 +1175,7 @@ def run(args, parser) -> None:
         handle_media_directory(args, temp_dirs)
         report_resource_usage("After media handling")
 
-    print("Everything is done!")
+    logger.info("Everything is done!")
     report_resource_usage("Final")
     for tmp in temp_dirs:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -1180,4 +1185,5 @@ def main() -> None:
     """Entry point for console scripts."""
     parser = setup_argument_parser()
     args = parser.parse_args()
+    setup_logging(args.verbose)
     run(args, parser)
