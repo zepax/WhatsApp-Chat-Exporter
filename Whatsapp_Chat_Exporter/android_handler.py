@@ -10,6 +10,7 @@ from markupsafe import escape as htmle
 from base64 import b64decode, b64encode
 from datetime import datetime
 from rich.progress import track
+import sys
 from Whatsapp_Chat_Exporter.data_model import ChatStore, Message
 from Whatsapp_Chat_Exporter.utility import (
     CURRENT_TZ_OFFSET,
@@ -851,15 +852,18 @@ def vcard(db, data, media_folder, filter_date, filter_chat, filter_empty):
         rows = _execute_vcard_query_legacy(c, filter_date, filter_chat, filter_empty)
 
     total_row_number = len(rows)
-    print(f"\nProcessing vCards...(0/{total_row_number})", end="\r")
 
     # Create vCards directory if it doesn't exist
     path = os.path.join(media_folder, "vCards")
     Path(path).mkdir(parents=True, exist_ok=True)
 
-    for index, row in enumerate(rows):
+    for row in track(
+        rows,
+        description="Processing vCards",
+        transient=True,
+        disable=not sys.stdout.isatty(),
+    ):
         _process_vcard_row(row, path, data)
-        print(f"Processing vCards...({index + 1}/{total_row_number})", end="\r")
 
 
 def _execute_vcard_query_modern(c, filter_date, filter_chat, filter_empty):
@@ -978,17 +982,22 @@ def calls(db, data, timezone_offset, filter_chat):
     if total_row_number == 0:
         return
 
-    print(f"\nProcessing calls...({total_row_number})", end="\r")
-
     # Fetch call data
     calls_data = _fetch_calls_data(c, filter_chat)
 
     # Create a chat store for all calls
     chat = ChatStore(Device.ANDROID, "WhatsApp Calls")
 
-    # Process each call
+    # Process each call with progress bar
     content = calls_data.fetchone()
-    while content is not None:
+    for _ in track(
+        range(total_row_number),
+        description="Processing calls",
+        transient=True,
+        disable=not sys.stdout.isatty(),
+    ):
+        if content is None:
+            break
         _process_call_record(content, chat, data, timezone_offset)
         content = calls_data.fetchone()
 
@@ -1117,7 +1126,6 @@ def create_html(
     template = setup_template(template, no_avatar, experimental)
 
     total_row_number = len(data)
-    print(f"\nGenerating chats...(0/{total_row_number})", end="\r")
 
     # Create output directory if it doesn't exist
     if not os.path.isdir(output_folder):
@@ -1125,7 +1133,12 @@ def create_html(
 
     w3css = get_status_location(output_folder, offline_static, allow_download=False)
 
-    for current, contact in enumerate(data):
+    for contact in track(
+        data,
+        description="Generating chats",
+        transient=True,
+        disable=not sys.stdout.isatty(),
+    ):
         current_chat = data.get_chat(contact)
         if len(current_chat) == 0:
             # Skip empty chats
@@ -1156,11 +1169,6 @@ def create_html(
                 w3css,
                 headline,
             )
-
-        if current % 10 == 0:
-            print(f"Generating chats...({current}/{total_row_number})", end="\r")
-
-    print(f"Generating chats...({total_row_number}/{total_row_number})", end="\r")
 
 
 def _generate_single_chat(
