@@ -119,6 +119,14 @@ def setup_argument_parser() -> ArgumentParser:
         "--size", "--output-size", "--split", dest="size", nargs='?', const=0, default=None,
         help="Maximum (rough) size of a single output file in bytes, 0 for auto"
     )
+    output_group.add_argument(
+        "--summary",
+        dest="summary",
+        nargs="?",
+        default=None,
+        const="summary.json",
+        help="Output a summary JSON with message counts per chat",
+    )
     
     # JSON formatting options
     json_group = parser.add_argument_group('JSON Options')
@@ -586,6 +594,10 @@ def create_output_files(args, data: ChatCollection, contact_store=None) -> None:
     if args.json and not args.import_json:
         export_json(args, data, contact_store)
 
+    # Create summary file if requested
+    if args.summary:
+        export_summary(args, data)
+
 
 def export_json(args, data: ChatCollection, contact_store=None) -> None:
     """Export data to JSON format."""
@@ -673,6 +685,23 @@ def export_multiple_json(args, data: Dict) -> None:
             f.write(file_content)
             print(f"Writing JSON file...({index + 1}/{total})", end="\r")
     print()
+
+
+def export_summary(args, data: ChatCollection) -> None:
+    """Export a JSON summary containing message counts for each chat."""
+    summary = {
+        "total_chats": len(data),
+        "chats": {},
+    }
+
+    for jid, chat in data.items():
+        summary["chats"][jid] = {
+            "name": chat.name,
+            "message_count": len(chat),
+        }
+
+    with open(args.summary, "w") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=2)
 
 
 def process_exported_chat(args, data: ChatCollection) -> None:
