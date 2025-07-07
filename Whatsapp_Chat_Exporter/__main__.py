@@ -900,7 +900,10 @@ def export_multiple_json(args, data: Dict) -> None:
 
     # Export each chat
     chats = list(data.keys())
-    for jik in track(chats, description="Exporting chats"):
+    total = len(chats)
+    for index, jik in track(
+        enumerate(chats, 1), total=total, description="Exporting chats"
+    ):
         if data[jik]["name"] is not None:
             contact = data[jik]["name"].replace("/", "")
         else:
@@ -913,7 +916,7 @@ def export_multiple_json(args, data: Dict) -> None:
                 indent=args.pretty_print_json,
             )
         f.write(file_content)
-        logger.info("Writing JSON file...(%d/%d)", index + 1, total)
+        logger.info("Writing JSON file...(%d/%d)", index, total)
     logger.info("")
 
 
