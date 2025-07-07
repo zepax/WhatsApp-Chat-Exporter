@@ -291,7 +291,7 @@ class Message:
         self.sender = None
         self.safe = False
         self.mime = None
-        self.message_type = message_type,
+        self.message_type = message_type
         self.received_timestamp = timing.format_timestamp(received_timestamp, "%Y/%m/%d %H:%M")
         self.read_timestamp = timing.format_timestamp(read_timestamp, "%Y/%m/%d %H:%M")
         
