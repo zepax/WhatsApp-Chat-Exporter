@@ -10,6 +10,7 @@ import glob
 import importlib.metadata
 import zipfile
 import tarfile
+import psutil
 from Whatsapp_Chat_Exporter import android_crypt, exported_handler, android_handler
 from Whatsapp_Chat_Exporter import ios_handler, ios_media_handler
 from Whatsapp_Chat_Exporter.data_model import ChatCollection, ChatStore
