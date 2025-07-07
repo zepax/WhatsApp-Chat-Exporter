@@ -5,7 +5,10 @@ import concurrent.futures
 from typing import Tuple, Union
 from hashlib import sha256
 from sys import exit
+import logging
 from Whatsapp_Chat_Exporter.utility import CRYPT14_OFFSETS, Crypt, DbType
+
+logger = logging.getLogger(__name__)
 
 try:
     import zlib
@@ -142,7 +145,9 @@ def _decrypt_crypt14(database: bytes, main_key: bytes, max_worker: int = 10) -> 
         except (zlib.error, ValueError):
             pass  # Try next offset
 
-    print("Common offsets failed. Initiating brute-force with multithreading...")
+    logger.info(
+        "Common offsets failed. Initiating brute-force with multithreading..."
+    )
 
     # Convert brute force generator into a list for parallel processing
     offset_combinations = list(brute_force_offset())
@@ -155,12 +160,14 @@ def _decrypt_crypt14(database: bytes, main_key: bytes, max_worker: int = 10) -> 
 
         try:
             db = _decrypt_database(db_ciphertext, main_key, iv)
-            print(
-                f"The offsets of your IV and database are {start_iv} and "
-                f"{start_db}, respectively. To include your offsets in the "
-                "program, please report it by creating an issue on GitHub: "
+            logger.info(
+                "The offsets of your IV and database are %s and %s, "
+                "respectively. To include your offsets in the program, "
+                "please report it by creating an issue on GitHub: "
                 "https://github.com/KnugiHK/Whatsapp-Chat-Exporter/discussions/47"
-                "\nShutting down other threads..."
+                "\nShutting down other threads...",
+                start_iv,
+                start_db,
             )
             return db
         except (zlib.error, ValueError):
@@ -178,7 +185,9 @@ def _decrypt_crypt14(database: bytes, main_key: bytes, max_worker: int = 10) -> 
                     return result
 
         except KeyboardInterrupt:
-            print("\nBrute force interrupted by user (Ctrl+C). Exiting gracefully...")
+            logger.warning(
+                "Brute force interrupted by user (Ctrl+C). Exiting gracefully..."
+            )
             executor.shutdown(wait=False, cancel_futures=True)
             exit(1)
 
@@ -304,8 +313,10 @@ def decrypt_backup(
         else:
             main_key, hex_key = _derive_main_enc_key(key)
         if show_crypt15:
-            hex_key_str = ' '.join([hex_key.hex()[c:c+4] for c in range(0, len(hex_key.hex()), 4)])
-            print(f"The HEX key of the crypt15 backup is: {hex_key_str}")
+            hex_key_str = " ".join(
+                [hex_key.hex()[c : c + 4] for c in range(0, len(hex_key.hex()), 4)]
+            )
+            logger.info("The HEX key of the crypt15 backup is: %s", hex_key_str)
     else:
         main_key = key[126:]
 
