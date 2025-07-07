@@ -8,12 +8,25 @@ import json
 import string
 import glob
 import importlib.metadata
-from Whatsapp_Chat_Exporter import android_crypt, exported_handler, android_handler
+from pathlib import Path
+
+from Whatsapp_Chat_Exporter import (
+    android_crypt,
+    exported_handler,
+    android_handler,
+)
 from Whatsapp_Chat_Exporter import ios_handler, ios_media_handler
 from Whatsapp_Chat_Exporter.data_model import ChatCollection, ChatStore
-from Whatsapp_Chat_Exporter.utility import APPLE_TIME, Crypt, check_update, DbType
-from Whatsapp_Chat_Exporter.utility import readable_to_bytes, sanitize_filename
-from Whatsapp_Chat_Exporter.utility import import_from_json, bytes_to_readable
+from Whatsapp_Chat_Exporter.utility import (
+    APPLE_TIME,
+    Crypt,
+    check_update,
+    DbType,
+    readable_to_bytes,
+    sanitize_filename,
+    import_from_json,
+    bytes_to_readable,
+)
 from argparse import ArgumentParser, SUPPRESS
 from datetime import datetime
 from getpass import getpass
@@ -385,19 +398,24 @@ def decrypt_android_backup(args) -> int:
     
     # Get key
     keyfile_stream = False
-    if not os.path.isfile(args.key) and all(char in string.hexdigits for char in args.key.replace(" ", "")):
+    if not os.path.isfile(args.key) and all(
+        char in string.hexdigits for char in args.key.replace(" ", "")
+    ):
         key = bytes.fromhex(args.key.replace(" ", ""))
     else:
-        key = open(args.key, "rb")
+        with open(args.key, "rb") as kf:
+            key = kf.read()
         keyfile_stream = True
     
     # Read backup
-    db = open(args.backup, "rb").read()
+    with open(args.backup, "rb") as f:
+        db = f.read()
     
     # Process WAB if provided
     error_wa = 0
     if args.wab:
-        wab = open(args.wab, "rb").read()
+        with open(args.wab, "rb") as f:
+            wab = f.read()
         error_wa = android_crypt.decrypt_backup(
             wab,
             key,
@@ -639,6 +657,44 @@ def process_exported_chat(args, data: ChatCollection) -> None:
         shutil.copy(file, args.output)
 
 
+def prepare_device(args) -> None:
+    """Set sensible defaults and handle backups for Android or iOS."""
+    if args.android:
+        if args.media is None:
+            args.media = "WhatsApp"
+        if args.db is None:
+            args.db = "msgstore.db"
+        if args.wa is None:
+            args.wa = "wa.db"
+
+        if args.key is not None:
+            error = decrypt_android_backup(args)
+            if error != 0:
+                handle_decrypt_error(error)
+    else:
+        if args.business:
+            from Whatsapp_Chat_Exporter.utility import (
+                WhatsAppBusinessIdentifier as identifiers,
+            )
+        else:
+            from Whatsapp_Chat_Exporter.utility import WhatsAppIdentifier as identifiers
+
+        args.identifiers = identifiers
+
+        if args.media is None:
+            args.media = identifiers.DOMAIN
+
+        if args.backup is not None:
+            if not os.path.isdir(args.media):
+                ios_media_handler.extract_media(args.backup, identifiers, args.decrypt_chunk_size)
+            else:
+                print("WhatsApp directory already exists, skipping WhatsApp file extraction.")
+
+        if args.db is None:
+            args.db = identifiers.MESSAGE
+        if args.wa is None:
+            args.wa = "ContactsV2.sqlite"
+
 def main():
     """Main function to run the WhatsApp Chat Exporter."""
     # Set up and parse arguments
@@ -653,7 +709,7 @@ def main():
     validate_args(parser, args)
     
     # Create output directory if it doesn't exist
-    os.makedirs(args.output, exist_ok=True)
+    Path(args.output).mkdir(parents=True, exist_ok=True)
     
     # Initialize data collection
     data = ChatCollection()
@@ -662,75 +718,18 @@ def main():
     contact_store = setup_contact_store(args)
     
     if args.import_json:
-        # Import from JSON
         import_from_json(args.json, data)
-        android_handler.create_html(
-            data,
-            args.output,
-            args.template,
-            args.embedded,
-            args.offline,
-            args.size,
-            args.no_avatar,
-            args.whatsapp_theme,
-            args.headline
-        )
-    elif args.exported:
-        # Process exported chat
-        process_exported_chat(args, data)
-    else:
-        # Process Android or iOS data
-        if args.android:
-            # Set default media path if not provided
-            if args.media is None:
-                args.media = "WhatsApp"
-                
-            # Set default DB paths if not provided
-            if args.db is None:
-                args.db = "msgstore.db"
-            if args.wa is None:
-                args.wa = "wa.db"
-                
-            # Decrypt backup if needed
-            if args.key is not None:
-                error = decrypt_android_backup(args)
-                if error != 0:
-                    handle_decrypt_error(error)
-        elif args.ios:
-            # Set up identifiers based on business flag
-            if args.business:
-                from Whatsapp_Chat_Exporter.utility import WhatsAppBusinessIdentifier as identifiers
-            else:
-                from Whatsapp_Chat_Exporter.utility import WhatsAppIdentifier as identifiers
-            args.identifiers = identifiers
-            
-            # Set default media path if not provided
-            if args.media is None:
-                args.media = identifiers.DOMAIN
-                
-            # Extract media from backup if needed
-            if args.backup is not None:
-                if not os.path.isdir(args.media):
-                    ios_media_handler.extract_media(args.backup, identifiers, args.decrypt_chunk_size)
-                else:
-                    print("WhatsApp directory already exists, skipping WhatsApp file extraction.")
-                    
-            # Set default DB paths if not provided
-            if args.db is None:
-                args.db = identifiers.MESSAGE
-            if args.wa is None:
-                args.wa = "ContactsV2.sqlite"
-        
-        # Process contacts
-        process_contacts(args, data, contact_store)
-        
-        # Process messages, media, and calls
-        process_messages(args, data)
-        
-        # Create output files
         create_output_files(args, data, contact_store)
-        
-        # Handle media directory
-        handle_media_directory(args)
+        return
 
-        print("Everything is done!")
+    if args.exported:
+        process_exported_chat(args, data)
+        return
+
+    prepare_device(args)
+
+    process_contacts(args, data, contact_store)
+    process_messages(args, data)
+    create_output_files(args, data, contact_store)
+    handle_media_directory(args)
+    print("Everything is done!")
