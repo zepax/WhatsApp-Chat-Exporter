@@ -16,6 +16,7 @@ def test_message_date_attribute():
     expected = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
     assert msg.date == expected
 
+
 from types import SimpleNamespace
 from pathlib import Path
 from mimetypes import MimeTypes
@@ -25,6 +26,7 @@ import os
 from Whatsapp_Chat_Exporter.data_model import ChatCollection, ChatStore
 from Whatsapp_Chat_Exporter.utility import Device
 import Whatsapp_Chat_Exporter.android_handler as android_handler
+import Whatsapp_Chat_Exporter.ios_handler as ios_handler
 
 
 def test_slug_cached(monkeypatch, tmp_path):
@@ -72,3 +74,79 @@ def test_slug_cached(monkeypatch, tmp_path):
     assert chat.slug == "slugged"
     assert len(calls) == 1
 
+
+def test_android_media_traversal_rejected(tmp_path):
+    data = ChatCollection()
+    chat = ChatStore(Device.ANDROID)
+    ts = 1_660_000_000
+    msg = Message(
+        from_me=1,
+        timestamp=ts,
+        time=ts,
+        key_id=1,
+        received_timestamp=ts + 1,
+        read_timestamp=ts + 2,
+        timezone_offset=0,
+    )
+    chat.add_message("1", msg)
+    data.add_chat("123@c.us", chat)
+
+    media_dir = tmp_path / "media"
+    media_dir.mkdir()
+    (media_dir / "thumbnails").mkdir()
+    outside = tmp_path / "outside.jpg"
+    outside.write_bytes(b"a")
+
+    content = {
+        "file_path": "../outside.jpg",
+        "message_row_id": "1",
+        "key_remote_jid": "123@c.us",
+        "mime_type": None,
+        "file_hash": b"hash",
+        "thumbnail": None,
+    }
+
+    mime = MimeTypes()
+    android_handler._process_single_media(data, content, str(media_dir), mime, False)
+
+    msg = chat.get_message("1")
+    assert msg.data == "The media is missing"
+    assert msg.meta
+
+
+def test_ios_media_traversal_rejected(tmp_path):
+    data = ChatCollection()
+    chat = ChatStore(Device.IOS)
+    ts = 1_660_000_000
+    msg = Message(
+        from_me=1,
+        timestamp=ts,
+        time=ts,
+        key_id=1,
+        received_timestamp=ts + 1,
+        read_timestamp=ts + 2,
+        timezone_offset=0,
+    )
+    chat.add_message("1", msg)
+    data.add_chat("123@c.us", chat)
+
+    media_dir = tmp_path / "Media"
+    msg_dir = media_dir / "Message"
+    msg_dir.mkdir(parents=True)
+    outside = tmp_path / "outside.mov"
+    outside.write_bytes(b"a")
+
+    content = {
+        "ZMEDIALOCALPATH": "../outside.mov",
+        "ZCONTACTJID": "123@c.us",
+        "ZMESSAGE": "1",
+        "ZVCARDSTRING": None,
+        "ZTITLE": None,
+    }
+
+    mime = MimeTypes()
+    ios_handler.process_media_item(content, data, str(media_dir), mime, False)
+
+    msg = chat.get_message("1")
+    assert msg.data == "The media is missing"
+    assert msg.meta
