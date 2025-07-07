@@ -11,6 +11,7 @@ from base64 import b64decode, b64encode
 from datetime import datetime
 from rich.progress import track
 import sys
+import logging
 from Whatsapp_Chat_Exporter.data_model import ChatStore, Message
 from Whatsapp_Chat_Exporter.utility import (
     CURRENT_TZ_OFFSET,
@@ -36,6 +37,8 @@ from Whatsapp_Chat_Exporter.utility import (
     bytes_to_readable,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def contacts(db, data, enrich_from_vcards):
     """
@@ -55,16 +58,16 @@ def contacts(db, data, enrich_from_vcards):
 
     if total_row_number == 0:
         if enrich_from_vcards is not None:
-            print(
+            logger.info(
                 "No contacts profiles found in the default database, contacts will be imported from the specified vCard file."
             )
         else:
-            print(
+            logger.info(
                 "No contacts profiles found in the default database, consider using --enrich-from-vcards for adopting names from exported contacts from Google"
             )
         return False
     else:
-        print(f"Processing contacts...({total_row_number})")
+        logger.info("Processing contacts...(%s)", total_row_number)
 
     c.execute(
         "SELECT jid, COALESCE(display_name, wa_name) as display_name, status FROM wa_contacts;"

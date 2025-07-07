@@ -18,6 +18,9 @@ from enum import IntEnum
 from Whatsapp_Chat_Exporter.data_model import ChatStore
 from typing import Dict, List, Optional, Tuple
 from rich.progress import track
+import logging
+
+logger = logging.getLogger(__name__)
 try:
     from enum import StrEnum, IntEnum
 except ImportError:
@@ -188,7 +191,7 @@ def determine_day(last: int, current: int) -> Optional[datetime.date]:
 def check_update(allow_network: bool = False):
     """Check PyPI for a newer version if network access is allowed."""
     if not allow_network:
-        print("Network access disabled; skipping update check.")
+        logger.info("Network access disabled; skipping update check.")
         return 0
     import urllib.request
     import json
@@ -199,7 +202,7 @@ def check_update(allow_network: bool = False):
     try:
         raw = urllib.request.urlopen(PACKAGE_JSON)
     except Exception:
-        print("Failed to check for updates.")
+        logger.warning("Failed to check for updates.")
         return 1
     else:
         with raw:
@@ -208,17 +211,21 @@ def check_update(allow_network: bool = False):
             __version__ = importlib.metadata.version("whatsapp_chat_exporter")
             current_version = tuple(map(int, __version__.split(".")))
             if current_version < latest_version:
-                print("===============Update===============")
-                print("A newer version of WhatsApp Chat Exporter is available.")
-                print("Current version: " + __version__)
-                print("Latest version: " + package_info["info"]["version"])
+                logger.info("===============Update===============")
+                logger.info("A newer version of WhatsApp Chat Exporter is available.")
+                logger.info("Current version: %s", __version__)
+                logger.info("Latest version: %s", package_info["info"]["version"])
                 if platform == "win32":
-                    print("Update with: pip install --upgrade whatsapp-chat-exporter")
+                    logger.info(
+                        "Update with: pip install --upgrade whatsapp-chat-exporter"
+                    )
                 else:
-                    print("Update with: pip3 install --upgrade whatsapp-chat-exporter")
-                print("====================================")
+                    logger.info(
+                        "Update with: pip3 install --upgrade whatsapp-chat-exporter"
+                    )
+                logger.info("====================================")
             else:
-                print("You are using the latest version of WhatsApp Chat Exporter.")
+                logger.info("You are using the latest version of WhatsApp Chat Exporter.")
     return 0
 
 
