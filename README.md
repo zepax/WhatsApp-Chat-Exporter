@@ -186,6 +186,7 @@ Input Files:
 Output Options:
   -o, --output OUTPUT   Output to specific directory (default: result)
   -j, --json [JSON]     Save the result to a single JSON file (default if present: result.json)
+  --summary SUMMARY     Write a summary JSON file with chat counts
   --txt [TEXT_FORMAT]   Export chats in text format similar to what WhatsApp officially provided (default if present:
                         result/)
   --no-html             Do not output html files
