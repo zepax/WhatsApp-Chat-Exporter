@@ -23,3 +23,4 @@ def test_cli_help_export():
     assert result.exit_code == 0
     assert "--android" in result.output
     assert "--prompt-user" in result.output
+    assert "--summary" in result.output

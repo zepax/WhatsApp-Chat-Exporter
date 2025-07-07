@@ -176,6 +176,12 @@ def setup_argument_parser() -> ArgumentParser:
         help="Save the result to a single JSON file (default if present: result.json)",
     )
     output_group.add_argument(
+        "--summary",
+        dest="summary",
+        default=None,
+        help="Write a summary JSON file with chat counts",
+    )
+    output_group.add_argument(
         "--txt",
         dest="text_format",
         nargs="?",
