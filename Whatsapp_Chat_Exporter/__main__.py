@@ -37,12 +37,19 @@ else:
 
 def setup_argument_parser() -> ArgumentParser:
     """Set up and return the argument parser with all options."""
+    try:
+        version = importlib.metadata.version("whatsapp_chat_exporter")
+    except importlib.metadata.PackageNotFoundError:
+        version = "dev"
+
     parser = ArgumentParser(
         description="A customizable Android and iOS/iPadOS WhatsApp database parser that "
         "will give you the history of your WhatsApp conversations in HTML "
         "and JSON. Android Backup Crypt12, Crypt14 and Crypt15 supported.",
-        epilog=f'WhatsApp Chat Exporter: {importlib.metadata.version("whatsapp_chat_exporter")} Licensed with MIT. See '
-        "https://wts.knugi.dev/docs?dest=osl for all open source licenses.",
+        epilog=(
+            f"WhatsApp Chat Exporter: {version} Licensed with MIT. See "
+            "https://wts.knugi.dev/docs?dest=osl for all open source licenses."
+        ),
     )
 
     # Device type arguments
