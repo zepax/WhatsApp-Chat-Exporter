@@ -32,6 +32,9 @@ cd working_wts
 > [!TIP]
 > macOS users should grant *Full Disk Access* to Terminal in the *Security & Privacy* settings before using the exporter.
 
+> [!IMPORTANT]
+> On Linux or macOS you may need root permissions to read certain backups or decrypt databases. Run the commands with `sudo` or as an administrator if you encounter permission errors.
+
 ## Working with Android
 ### Unencrypted WhatsApp database
 Extract the WhatsApp database with whatever means, one possible means is to use the [WhatsApp-Key-DB-Extractor](https://github.com/KnugiHK/WhatsApp-Key-DB-Extractor). Note that the extractor only works on Android 4.0 to 13.
