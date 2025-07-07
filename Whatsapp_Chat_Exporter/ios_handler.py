@@ -4,6 +4,7 @@ import os
 import shutil
 from glob import glob
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 from mimetypes import MimeTypes
 from markupsafe import escape as htmle
 from Whatsapp_Chat_Exporter.data_model import ChatStore, Message
@@ -303,8 +304,28 @@ def process_message_text(message, content):
     message.data = msg
 
 
-def media(db, data, media_folder, filter_date, filter_chat, filter_empty, separate_media=False):
-    """Process media files from WhatsApp messages."""
+def media(
+    db,
+    data,
+    media_folder,
+    filter_date,
+    filter_chat,
+    filter_empty,
+    separate_media=False,
+    copy_workers=4,
+):
+    """Process media files from WhatsApp messages.
+
+    Args:
+        db: Database connection.
+        data: Data store object.
+        media_folder: Folder containing media files.
+        filter_date: Date filter condition.
+        filter_chat: Chat filter conditions.
+        filter_empty: Filter for empty chats.
+        separate_media: Whether to separate media files by chat.
+        copy_workers: Number of threads used to copy media files.
+    """
     c = db.cursor()
     
     # Build filter conditions
@@ -357,10 +378,20 @@ def media(db, data, media_folder, filter_date, filter_chat, filter_empty, separa
     
     # Process each media item
     mime = MimeTypes()
+    executor = ThreadPoolExecutor(max_workers=copy_workers) if separate_media else None
+    tasks = []
     i = 0
     content = c.fetchone()
     while content is not None:
-        process_media_item(content, data, media_folder, mime, separate_media)
+        process_media_item(
+            content,
+            data,
+            media_folder,
+            mime,
+            separate_media,
+            executor,
+            tasks,
+        )
         
         # Update progress
         i += 1
@@ -368,10 +399,23 @@ def media(db, data, media_folder, filter_date, filter_chat, filter_empty, separa
             print(f"Processing media...({i}/{total_row_number})", end="\r")
         content = c.fetchone()
     
+    if executor:
+        for task in tasks:
+            task.result()
+        executor.shutdown()
+
     print(f"Processing media...({total_row_number}/{total_row_number})", end="\r")
 
 
-def process_media_item(content, data, media_folder, mime, separate_media):
+def process_media_item(
+    content,
+    data,
+    media_folder,
+    mime,
+    separate_media,
+    executor=None,
+    tasks=None,
+):
     """Process a single media item."""
     file_path = f"{media_folder}/Message/{content['ZMEDIALOCALPATH']}"
     current_chat = data.get_chat(content["ZCONTACTJID"])
@@ -398,7 +442,10 @@ def process_media_item(content, data, media_folder, mime, separate_media):
             new_folder = os.path.join(media_folder, "separated", chat_display_name)
             Path(new_folder).mkdir(parents=True, exist_ok=True)
             new_path = os.path.join(new_folder, current_filename)
-            shutil.copy2(file_path, new_path)
+            if executor and tasks is not None:
+                tasks.append(executor.submit(shutil.copy2, file_path, new_path))
+            else:
+                shutil.copy2(file_path, new_path)
             message.data = '/'.join(new_path.split("\\")[1:])
     else:
         # Handle missing media

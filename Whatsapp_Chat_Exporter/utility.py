@@ -5,6 +5,8 @@ import os
 import unicodedata
 import re
 import math
+import shutil
+from concurrent.futures import ThreadPoolExecutor
 from bleach import clean as sanitize
 from markupsafe import Markup
 from datetime import datetime, timedelta
@@ -534,6 +536,19 @@ def slugify(value: str, allow_unicode: bool = False) -> str:
         value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
     value = re.sub(r'[^\w\s-]', '', value.lower())
     return re.sub(r'[-\s]+', '-', value).strip('-_')
+
+
+def copy_parallel(file_pairs: List[Tuple[str, str]], workers: int = 4) -> None:
+    """Copy multiple files concurrently.
+
+    Args:
+        file_pairs: List of ``(src, dst)`` tuples.
+        workers: Maximum number of concurrent threads.
+    """
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        tasks = [executor.submit(shutil.copy2, src, dst) for src, dst in file_pairs]
+        for task in tasks:
+            task.result()
 
 
 class WhatsAppIdentifier(StrEnum):
