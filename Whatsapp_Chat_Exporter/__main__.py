@@ -6,6 +6,8 @@ import sqlite3
 import shutil
 import json
 import string
+import asyncio
+import aiofiles
 import importlib.metadata
 import zipfile
 import tarfile
@@ -930,30 +932,33 @@ def export_single_json(args, data: Dict) -> None:
 
 
 def export_single_json_stream(args, data: Dict) -> None:
-    """Stream JSON data to a single file without building it in memory."""
-    with open(args.json, "w") as f:
-        f.write("{")
-        for index, (jid, chat) in enumerate(data.items()):
-            obj = {jid: chat}
-            chunk = json.dumps(
-                obj,
-                ensure_ascii=not args.avoid_encoding_json,
-                indent=args.pretty_print_json,
-            )
-            chunk = chunk[1:-1]
-            if args.pretty_print_json is not None and index == 0:
-                f.write("\n")
-            if index > 0:
-                f.write(",")
+    """Stream JSON data using asynchronous file writes."""
+
+    async def _stream() -> None:
+        async with aiofiles.open(args.json, "w") as f:
+            await f.write("{")
+            for index, (jid, chat) in enumerate(data.items()):
+                obj = {jid: chat}
+                chunk = json.dumps(
+                    obj,
+                    ensure_ascii=not args.avoid_encoding_json,
+                    indent=args.pretty_print_json,
+                )[1:-1]
+                if args.pretty_print_json is not None and index == 0:
+                    await f.write("\n")
+                if index > 0:
+                    await f.write(",")
+                    if args.pretty_print_json is not None:
+                        await f.write("\n")
                 if args.pretty_print_json is not None:
-                    f.write("\n")
+                    await f.write(" " * args.pretty_print_json + chunk)
+                else:
+                    await f.write(chunk)
             if args.pretty_print_json is not None:
-                f.write(" " * args.pretty_print_json + chunk)
-            else:
-                f.write(chunk)
-        if args.pretty_print_json is not None:
-            f.write("\n")
-        f.write("}")
+                await f.write("\n")
+            await f.write("}")
+
+    asyncio.run(_stream())
 
 
 def export_multiple_json(args, data: Dict) -> None:
