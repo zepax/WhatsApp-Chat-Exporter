@@ -11,13 +11,19 @@ app = typer.Typer(help="WhatsApp Chat Exporter")
 def export(
     android: bool = typer.Option(False, "--android", "-a", help="Target is Android"),
     ios: bool = typer.Option(False, "--ios", "-i", help="Target is iPhone/iPad"),
-    exported: Optional[Path] = typer.Option(None, "--exported", "-e", help="Chat export file"),
+    exported: Optional[Path] = typer.Option(
+        None, "--exported", "-e", help="Chat export file"
+    ),
     backup: Optional[Path] = typer.Option(None, "--backup", help="Backup file"),
     wa: Optional[Path] = typer.Option(None, "--wa", help="Contacts database"),
     media: Optional[Path] = typer.Option(None, "--media", help="Media directory"),
     db: Optional[Path] = typer.Option(None, "--db", help="Message database"),
-    output: Path = typer.Option(Path("result"), "--output", "-o", help="Output directory"),
-    json: Optional[Path] = typer.Option(None, "--json", "-j", help="Save chats to JSON"),
+    output: Path = typer.Option(
+        Path("result"), "--output", "-o", help="Output directory"
+    ),
+    json: Optional[Path] = typer.Option(
+        None, "--json", "-j", help="Save chats to JSON"
+    ),
 ) -> None:
     """Export WhatsApp chats."""
     parser = __main__.setup_argument_parser()
@@ -36,4 +42,3 @@ def export(
 
 if __name__ == "__main__":
     app()
-
