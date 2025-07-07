@@ -118,6 +118,7 @@ def messages(db, data, media_folder, timezone_offset, filter_date, filter_chat, 
         else:
             current_chat = data.get_chat(contact_id)
             current_chat.name = contact_name
+            current_chat.slug = slugify(contact_name, True)
             current_chat.my_avatar = os.path.join(media_folder, "Media/Profile/Photo.jpg")
         
         # Process avatar images
@@ -393,7 +394,12 @@ def process_media_item(content, data, media_folder, mime, separate_media):
         
         # Handle separate media option
         if separate_media:
-            chat_display_name = slugify(current_chat.name or message.sender or content["ZCONTACTJID"].split('@')[0], True)
+            if not current_chat.slug:
+                current_chat.slug = slugify(
+                    current_chat.name or message.sender or content["ZCONTACTJID"].split('@')[0],
+                    True,
+                )
+            chat_display_name = current_chat.slug
             current_filename = file_path.split("/")[-1]
             new_folder = os.path.join(media_folder, "separated", chat_display_name)
             Path(new_folder).mkdir(parents=True, exist_ok=True)
