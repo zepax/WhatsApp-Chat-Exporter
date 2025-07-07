@@ -23,37 +23,32 @@
 import struct
 import codecs
 from datetime import datetime, timedelta
+from plistlib import dumps, FMT_BINARY
 
 class BPListWriter(object):
     def __init__(self, objects):
-        self.bplist = ""
+        self.bplist = b""
         self.objects = objects
     
     def binary(self):
         '''binary -> string
-        
+
         Generates bplist
         '''
-        self.data = 'bplist00'
-        
-        # TODO: flatten objects and count max length size
-        
-        # TODO: write objects and save offsets
-        
-        # TODO: write offsets
-        
-        # TODO: write metadata
-        
-        return self.data
+        # The reader expects bytes starting with the bplist magic header.
+        # Use the builtin plistlib implementation to ensure compliance with the
+        # binary plist specification.
+        self.bplist = dumps(self.objects, fmt=FMT_BINARY)
+        return self.bplist
     
     def write(self, filename):
         '''
         
         Writes bplist to file
         '''
-        if self.bplist != "":
-            pass
-            # TODO: save self.bplist to file
+        if self.bplist != b"":
+            with open(filename, "wb") as fp:
+                fp.write(self.bplist)
         else:
             raise Exception('BPlist not yet generated')
 
