@@ -8,12 +8,15 @@ import json
 import string
 import glob
 import importlib.metadata
+import zipfile
+import tarfile
 from Whatsapp_Chat_Exporter import android_crypt, exported_handler, android_handler
 from Whatsapp_Chat_Exporter import ios_handler, ios_media_handler
 from Whatsapp_Chat_Exporter.data_model import ChatCollection, ChatStore
 from Whatsapp_Chat_Exporter.utility import APPLE_TIME, Crypt, check_update, DbType
 from Whatsapp_Chat_Exporter.utility import readable_to_bytes, sanitize_filename
 from Whatsapp_Chat_Exporter.utility import import_from_json, bytes_to_readable
+from Whatsapp_Chat_Exporter.utility import extract_archive
 from argparse import ArgumentParser, SUPPRESS
 from datetime import datetime
 from getpass import getpass
@@ -679,6 +682,8 @@ def main():
     # Set up and parse arguments
     parser = setup_argument_parser()
     args = parser.parse_args()
+
+    temp_dirs = []
     
     # Check for updates
     if args.check_update:
@@ -745,8 +750,15 @@ def main():
                 
             # Extract media from backup if needed
             if args.backup is not None:
+                backup_path = args.backup
+                if os.path.isfile(backup_path) and (
+                    zipfile.is_zipfile(backup_path) or tarfile.is_tarfile(backup_path)
+                ):
+                    backup_path = extract_archive(backup_path)
+                    temp_dirs.append(backup_path)
+
                 if not os.path.isdir(args.media):
-                    ios_media_handler.extract_media(args.backup, identifiers, args.decrypt_chunk_size)
+                    ios_media_handler.extract_media(backup_path, identifiers, args.decrypt_chunk_size)
                 else:
                     print("WhatsApp directory already exists, skipping WhatsApp file extraction.")
                     
@@ -769,3 +781,6 @@ def main():
         handle_media_directory(args)
 
         print("Everything is done!")
+
+    for tmp in temp_dirs:
+        shutil.rmtree(tmp, ignore_errors=True)
