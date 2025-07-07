@@ -816,8 +816,13 @@ def process_calls(args, db, data: ChatCollection, filter_chat) -> None:
             ios_handler.calls(cdb, data, args.timezone_offset, filter_chat)
 
 
-def handle_media_directory(args, temp_dirs=None) -> None:
-    """Handle media directory copying or moving."""
+def handle_media_directory(args, temp_dirs) -> None:
+    """Handle media directory copying or moving.
+
+    Args:
+        args: Parsed CLI arguments.
+        temp_dirs: List of temporary directories created during execution.
+    """
     if args.skip_media:
         print("\nSkipping media directory as per --skip-media", end="\n")
         return
@@ -842,19 +847,13 @@ def handle_media_directory(args, temp_dirs=None) -> None:
             else:
                 logger.info("Copying media directory...")
                 shutil.copytree(args.media, media_path)
+
         if args.cleanup_temp and not args.move_media:
             abs_media = os.path.abspath(args.media)
-            if temp_dirs and any(
-                os.path.commonpath([os.path.abspath(tmp), abs_media])
-                == os.path.abspath(tmp)
-                for tmp in temp_dirs
-            ):
-                shutil.rmtree(args.media, ignore_errors=True)
-            else:
-                logger.warning(
-                    "Refusing to delete non-temporary media directory: %s",
-                    args.media,
-                )
+            for tmp in map(os.path.abspath, temp_dirs):
+                if os.path.commonpath([abs_media, tmp]) == tmp:
+                    shutil.rmtree(args.media, ignore_errors=True)
+                    break
 
 
 def create_output_files(args, data: ChatCollection, contact_store=None) -> None:
