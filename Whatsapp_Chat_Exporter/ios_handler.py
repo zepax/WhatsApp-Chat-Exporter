@@ -25,9 +25,7 @@ from Whatsapp_Chat_Exporter.utility import (
 def contacts(db, data):
     """Process WhatsApp contacts with status information."""
     c = db.cursor()
-    c.execute(
-        """SELECT count() FROM ZWAADDRESSBOOKCONTACT WHERE ZABOUTTEXT IS NOT NULL"""
-    )
+    c.execute("""SELECT count() FROM ZWAADDRESSBOOKCONTACT WHERE ZABOUTTEXT IS NOT NULL""")
     total_row_number = c.fetchone()[0]
     print(f"Pre-processing contacts...({total_row_number})")
 
@@ -70,9 +68,7 @@ def get_contact_name(content):
         return content["ZPUSHNAME"]
 
 
-def messages(
-    db, data, media_folder, timezone_offset, filter_date, filter_chat, filter_empty
-):
+def messages(db, data, media_folder, timezone_offset, filter_date, filter_chat, filter_empty):
     """Process WhatsApp messages and contacts from the database."""
     c = db.cursor()
     cursor2 = db.cursor()
@@ -229,13 +225,12 @@ def messages(
             received_timestamp=(
                 APPLE_TIME + content["ZSENTDATE"] if content["ZSENTDATE"] else None
             ),
-            read_timestamp=None,  # TODO: Add timestamp
+            # iOS database does not store read timestamps
+            read_timestamp=None,
         )
 
         # Process message data
-        invalid = process_message_data(
-            message, content, is_group_message, data, cursor2
-        )
+        invalid = process_message_data(message, content, is_group_message, data, cursor2)
 
         # Add valid messages to chat
         if not invalid:
@@ -267,11 +262,7 @@ def process_message_data(message, content, is_group_message, data, cursor2):
         return process_metadata_message(message, content, is_group_message)
 
     # Handle quoted replies
-    if (
-        content["ZMETADATA"] is not None
-        and content["ZMETADATA"].startswith(b"\x2a\x14")
-        and False
-    ):
+    if content["ZMETADATA"] is not None and content["ZMETADATA"].startswith(b"\x2a\x14") and False:
         quoted = content["ZMETADATA"][2:19]
         message.reply = quoted.decode()
         cursor2.execute(
@@ -340,17 +331,8 @@ def process_message_text(message, content):
     message.data = msg
 
 
-def media(
-    db,
-    data,
-    media_folder,
-    filter_date,
-    filter_chat,
-    filter_empty,
-    separate_media=False,
-    copy_workers=4,
-):
-    """Process media files from WhatsApp messages.
+def media(db, data, media_folder, filter_date, filter_chat, filter_empty, separate_media=False):
+    """Process media files from WhatsApp messages."""
 
     Args:
         db: Database connection.
@@ -454,6 +436,7 @@ def media(
     print(f"Processing media...({total_row_number}/{total_row_number})", end="\r")
 
 
+
 def process_media_item(
     content,
     data,
@@ -484,12 +467,12 @@ def process_media_item(
 
         # Handle separate media option
         if separate_media:
-            chat_display_name = slugify(
-                current_chat.name
-                or message.sender
-                or content["ZCONTACTJID"].split("@")[0],
-                True,
-            )
+            if not current_chat.slug:
+                current_chat.slug = slugify(
+                    current_chat.name or message.sender or content["ZCONTACTJID"].split("@")[0],
+                    True,
+                )
+            chat_display_name = current_chat.slug
             current_filename = file_path.split("/")[-1]
             new_folder = os.path.join(media_folder, "separated", chat_display_name)
             Path(new_folder).mkdir(parents=True, exist_ok=True)
@@ -521,9 +504,7 @@ def vcard(db, data, media_folder, filter_date, filter_chat, filter_empty):
     chat_filter_exclude = get_chat_condition(
         filter_chat[1], False, ["ZCONTACTJID", "ZMEMBERJID"], "ZGROUPINFO", "ios"
     )
-    date_filter = (
-        f"AND ZWAMESSAGE.ZMESSAGEDATE {filter_date}" if filter_date is not None else ""
-    )
+    date_filter = f"AND ZWAMESSAGE.ZMESSAGEDATE {filter_date}" if filter_date is not None else ""
 
     # Fetch vCard mentions
     vcard_query = f"""
@@ -585,10 +566,7 @@ def process_vcard_item(content, path, data):
     # Create vCard summary and update message
     vcard_summary = "This media include the following vCard file(s):<br>"
     vcard_summary += " | ".join(
-        [
-            f'<a href="{htmle(fp)}">{htmle(name)}</a>'
-            for name, fp in zip(vcard_names, file_paths)
-        ]
+        [f'<a href="{htmle(fp)}">{htmle(name)}</a>' for name, fp in zip(vcard_names, file_paths)]
     )
 
     message = data.get_chat(content["ZCONTACTJID"]).get_message(content["ZMESSAGE"])
@@ -707,8 +685,7 @@ def format_call_data(call, content):
         call_time = convert_time_unit(int(content["ZDURATION"]))
         call_bytes = bytes_to_readable(content["bytes_transferred"])
         call_data += (
-            f"initiated and lasted for {call_time} "
-            f"with {call_bytes} data transferred."
+            f"initiated and lasted for {call_time} " f"with {call_bytes} data transferred."
         )
     else:
         call_data += "in an unknown state."

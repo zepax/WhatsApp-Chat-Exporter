@@ -12,15 +12,16 @@ from Whatsapp_Chat_Exporter.utility import Device
 MIME = MimeTypes()
 
 
-def messages(path, data, assume_first_as_me=False):
+def messages(path, data, assume_first_as_me=False, prompt_user=False):
     """
     Extracts messages from an exported WhatsApp chat file.
-    
+
     Args:
         path: Path to the exported chat file
         data: Data container object to store the parsed chat
-        assume_first_as_me: If True, assumes the first message is sent from the user without asking
-        
+        assume_first_as_me: If True, assume the first message is sent from the user
+        prompt_user: Whether to interactively confirm the user's name
+
     Returns:
         Updated data container with extracted messages
     """
@@ -28,53 +29,87 @@ def messages(path, data, assume_first_as_me=False):
     chat = data.add_chat("ExportedChat", ChatStore(Device.EXPORTED))
     you = ""  # Will store the username of the current user
     user_identification_done = False  # Flag to track if user identification has been done
-    
+
     # Process the file while also counting the total lines for progress
     with open(path, "r", encoding="utf8") as file:
         total_row_number = sum(1 for _ in file)
         file.seek(0)
         for index, line in enumerate(file):
             you, user_identification_done = process_line(
-                line, index, chat, path, you,
-                assume_first_as_me, user_identification_done
+                line,
+                index,
+                chat,
+                path,
+                you,
+                assume_first_as_me,
+                user_identification_done,
+                prompt_user,
             )
 
             # Show progress
             if index % 1000 == 0:
-                print(f"Processing messages & media...({index}/{total_row_number})", end="\r")
+                print(
+                    f"Processing messages & media...({index}/{total_row_number})",
+                    end="\r",
+                )
 
     print(f"Processing messages & media...({total_row_number}/{total_row_number})")
     return data
 
 
-def process_line(line, index, chat, file_path, you, assume_first_as_me, user_identification_done):
+def process_line(
+    line,
+    index,
+    chat,
+    file_path,
+    you,
+    assume_first_as_me,
+    user_identification_done,
+    prompt_user,
+):
     """
     Process a single line from the chat file
-    
+
     Returns:
         Tuple of (updated_you_value, updated_user_identification_done_flag)
     """
     parts = line.split(" - ", 1)
-    
+
     # Check if this is a new message (has timestamp format)
     if len(parts) > 1:
         time = parts[0]
         you, user_identification_done = process_new_message(
-            time, parts[1], index, chat, you, file_path, 
-            assume_first_as_me, user_identification_done
+            time,
+            parts[1],
+            index,
+            chat,
+            you,
+            file_path,
+            assume_first_as_me,
+            user_identification_done,
+            prompt_user,
         )
     else:
         # This is a continuation of the previous message
         process_message_continuation(line, index, chat)
-    
+
     return you, user_identification_done
 
 
-def process_new_message(time, content, index, chat, you, file_path, 
-                        assume_first_as_me, user_identification_done):
+def process_new_message(
+    time,
+    content,
+    index,
+    chat,
+    you,
+    file_path,
+    assume_first_as_me,
+    user_identification_done,
+    prompt_user,
+):
     """
     Process a line that contains a new message
-    
+
     Returns:
         Tuple of (updated_you_value, updated_user_identification_done_flag)
     """
@@ -85,9 +120,9 @@ def process_new_message(time, content, index, chat, you, file_path,
         time=time.split(", ")[1].strip(),
         key_id=index,
         received_timestamp=None,
-        read_timestamp=None
+        read_timestamp=None,
     )
-    
+
     # Check if this is a system message (no name:message format)
     if ":" not in content:
         msg.data = content
@@ -95,34 +130,34 @@ def process_new_message(time, content, index, chat, you, file_path,
     else:
         # Process user message
         name, message = content.strip().split(":", 1)
-        
+
         # Handle user identification
         if you == "":
             if chat.name is None:
                 # First sender identification
                 if not user_identification_done:
-                    if not assume_first_as_me:
-                        # Ask only once if this is the user
-                        you = prompt_for_user_identification(name)
-                        user_identification_done = True
-                    else:
+                    if assume_first_as_me:
                         you = name
-                        user_identification_done = True
+                    elif prompt_user:
+                        you = prompt_for_user_identification(name)
+                    else:
+                        you = ""
+                    user_identification_done = True
             else:
                 # If we know the chat name, anyone else must be "you"
                 if name != chat.name:
                     you = name
-        
+
         # Set the chat name if needed
         if chat.name is None and name != you:
             chat.name = name
-        
+
         # Determine if this message is from the current user
-        msg.from_me = (name == you)
-        
+        msg.from_me = name == you
+
         # Process message content
         process_message_content(msg, message, file_path)
-    
+
     chat.add_message(index, msg)
     return you, user_identification_done
 
@@ -142,11 +177,11 @@ def process_message_content(msg, message, file_path):
 def process_attached_file(msg, message, file_path):
     """Process an attached file in a message."""
     msg.media = True
-    
+
     # Extract file path and check if it exists
     file_name = message.split("(file attached)")[0].strip()
     attached_file_path = os.path.join(os.path.dirname(file_path), file_name)
-    
+
     if os.path.isfile(attached_file_path):
         msg.data = attached_file_path
         guess = MIME.guess_type(attached_file_path)[0]
@@ -164,9 +199,9 @@ def process_message_continuation(line, index, chat):
     keys = chat.keys()
     while lookback not in keys:
         lookback -= 1
-    
+
     msg = chat.get_message(lookback)
-    
+
     # Add the continuation line to the message
     if msg.media:
         msg.caption = line.strip()

@@ -27,7 +27,9 @@ except ImportError:
 
 MAX_SIZE = 4 * 1024 * 1024  # Default 4MB
 ROW_SIZE = 0x3D0
-CURRENT_TZ_OFFSET = datetime.now().astimezone().utcoffset().seconds / 3600
+CURRENT_TZ_OFFSET = (
+    datetime.now().astimezone().utcoffset().total_seconds() / 3600
+)
 
 
 def convert_time_unit(time_second: int) -> str:
@@ -169,7 +171,11 @@ def determine_day(last: int, current: int) -> Optional[datetime.date]:
         return current
 
 
-def check_update():
+def check_update(allow_network: bool = False):
+    """Check PyPI for a newer version if network access is allowed."""
+    if not allow_network:
+        print("Network access disabled; skipping update check.")
+        return 0
     import urllib.request
     import json
     import importlib
@@ -488,7 +494,9 @@ def determine_metadata(content: sqlite3.Row, init_msg: Optional[str]) -> Optiona
     return msg + handler if handler.startswith(" ") else handler
 
 
-def get_status_location(output_folder: str, offline_static: str) -> str:
+def get_status_location(
+    output_folder: str, offline_static: str, allow_download: bool = False
+) -> str:
     """
     Gets the location of the W3.CSS file, either from web or local storage.
 
@@ -502,16 +510,21 @@ def get_status_location(output_folder: str, offline_static: str) -> str:
     w3css = "https://www.w3schools.com/w3css/4/w3.css"
     if not offline_static:
         return w3css
-    import urllib.request
     static_folder = os.path.join(output_folder, offline_static)
+    w3css_path = os.path.join(static_folder, "w3.css")
+    if os.path.isfile(w3css_path):
+        return os.path.join(offline_static, "w3.css")
+    if not allow_download:
+        return w3css
+    import urllib.request
     if not os.path.isdir(static_folder):
         os.mkdir(static_folder)
-    w3css_path = os.path.join(static_folder, "w3.css")
     if not os.path.isfile(w3css_path):
         with urllib.request.urlopen(w3css) as resp:
             with open(w3css_path, "wb") as f:
                 f.write(resp.read())
     w3css = os.path.join(offline_static, "w3.css")
+    return w3css
 
 
 def setup_template(template: Optional[str], no_avatar: bool, experimental: bool = False) -> jinja2.Template:
