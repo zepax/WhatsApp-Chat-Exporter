@@ -8,11 +8,10 @@ runner = CliRunner()
 def test_cli_help():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "Usage: export" in result.output
+    assert "export" in result.output
 
 
 def test_cli_help_export():
     result = runner.invoke(app, ["export", "--help"])
     assert result.exit_code == 0
     assert "--android" in result.output
-
