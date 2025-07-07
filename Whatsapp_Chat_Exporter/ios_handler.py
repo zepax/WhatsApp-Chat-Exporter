@@ -479,7 +479,7 @@ def process_media_item(
         return
 
     if os.path.isfile(file_path):
-        message.data = "/".join(file_path.split("/")[1:])
+        message.data = os.path.relpath(file_path, Path(file_path).anchor)
 
         # Set MIME type
         if content["ZVCARDSTRING"] is None:
@@ -498,15 +498,12 @@ def process_media_item(
                     True,
                 )
             chat_display_name = current_chat.slug
-            current_filename = file_path.split("/")[-1]
+            current_filename = os.path.basename(file_path)
             new_folder = os.path.join(media_folder, "separated", chat_display_name)
             Path(new_folder).mkdir(parents=True, exist_ok=True)
             new_path = os.path.join(new_folder, current_filename)
-            if executor and tasks is not None:
-                tasks.append(executor.submit(shutil.copy2, file_path, new_path))
-            else:
-                shutil.copy2(file_path, new_path)
-            message.data = '/'.join(new_path.split("\\")[1:])
+            shutil.copy2(file_path, new_path)
+            message.data = os.path.relpath(new_path, Path(new_path).anchor)
     else:
         # Handle missing media
         message.data = "The media is missing"
