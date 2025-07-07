@@ -128,6 +128,13 @@ def setup_argument_parser() -> ArgumentParser:
         "--import", dest="import_json", default=False, action='store_true',
         help="Import JSON file and convert to HTML output"
     )
+    json_group.add_argument(
+        "--stream-json",
+        dest="stream_json",
+        default=False,
+        action="store_true",
+        help="Stream JSON output to reduce memory usage",
+    )
     
     # HTML options
     html_group = parser.add_argument_group('HTML Options')
@@ -569,7 +576,10 @@ def export_json(args, data: ChatCollection, contact_store=None) -> None:
     
     # Export as a single file or per chat
     if not args.json_per_chat:
-        export_single_json(args, data)
+        if args.stream_json:
+            export_single_json_stream(args, data)
+        else:
+            export_single_json(args, data)
     else:
         export_multiple_json(args, data)
 
@@ -584,6 +594,34 @@ def export_single_json(args, data: Dict) -> None:
         )
         print(f"\nWriting JSON file...({bytes_to_readable(len(json_data))})")
         f.write(json_data)
+
+
+def export_single_json_stream(args, data: Dict) -> None:
+    """Stream JSON data to a single file without building it in memory."""
+    with open(args.json, "w") as f:
+        f.write("{")
+        items = list(data.items())
+        for index, (jid, chat) in enumerate(items):
+            obj = {jid: chat}
+            chunk = json.dumps(
+                obj,
+                ensure_ascii=not args.avoid_encoding_json,
+                indent=args.pretty_print_json,
+            )
+            chunk = chunk[1:-1]
+            if args.pretty_print_json is not None and index == 0:
+                f.write("\n")
+            if index > 0:
+                f.write(",")
+                if args.pretty_print_json is not None:
+                    f.write("\n")
+            if args.pretty_print_json is not None:
+                f.write(" " * args.pretty_print_json + chunk)
+            else:
+                f.write(chunk)
+        if args.pretty_print_json is not None:
+            f.write("\n")
+        f.write("}")
 
 
 def export_multiple_json(args, data: Dict) -> None:
