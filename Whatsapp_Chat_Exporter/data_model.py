@@ -167,6 +167,11 @@ class ChatStore:
         if name is not None and not isinstance(name, str):
             raise TypeError("Name must be a string or None")
         self.name = name
+        if name:
+            from Whatsapp_Chat_Exporter.utility import slugify
+            self.slug = slugify(name, True)
+        else:
+            self.slug = None
         self._messages: Dict[str, 'Message'] = {}
         self.type = type
         if media is not None:
@@ -277,6 +282,7 @@ class Message:
             self.time = time
         else:
             raise TypeError("Time must be a string or number")
+        self.date = timing.format_timestamp(self.timestamp, "%Y-%m-%d")
 
         self.media = False
         self.key_id = key_id
@@ -302,6 +308,7 @@ class Message:
             'from_me': self.from_me,
             'timestamp': self.timestamp,
             'time': self.time,
+            'date': self.date,
             'media': self.media,
             'key_id': self.key_id,
             'meta': self.meta,
