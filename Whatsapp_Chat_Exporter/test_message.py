@@ -16,6 +16,7 @@ def test_message_date_attribute():
     expected = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
     assert msg.date == expected
 
+
 from types import SimpleNamespace
 from pathlib import Path
 from mimetypes import MimeTypes
@@ -72,3 +73,26 @@ def test_slug_cached(monkeypatch, tmp_path):
     assert chat.slug == "slugged"
     assert len(calls) == 1
 
+
+def test_get_last_message():
+    chat = ChatStore(Device.ANDROID)
+    msg1 = Message(
+        from_me=1,
+        timestamp=1,
+        time=1,
+        key_id=1,
+        received_timestamp=1,
+        read_timestamp=1,
+    )
+    msg2 = Message(
+        from_me=0,
+        timestamp=2,
+        time=2,
+        key_id=2,
+        received_timestamp=2,
+        read_timestamp=2,
+    )
+    chat.add_message("1", msg1)
+    chat.add_message("2", msg2)
+
+    assert chat.get_last_message() is msg2
