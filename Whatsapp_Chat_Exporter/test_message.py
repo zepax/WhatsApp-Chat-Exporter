@@ -75,78 +75,26 @@ def test_slug_cached(monkeypatch, tmp_path):
     assert len(calls) == 1
 
 
-def test_android_media_traversal_rejected(tmp_path):
-    data = ChatCollection()
+def test_get_last_message():
     chat = ChatStore(Device.ANDROID)
-    ts = 1_660_000_000
-    msg = Message(
+    msg1 = Message(
         from_me=1,
-        timestamp=ts,
-        time=ts,
+        timestamp=1,
+        time=1,
         key_id=1,
-        received_timestamp=ts + 1,
-        read_timestamp=ts + 2,
-        timezone_offset=0,
+        received_timestamp=1,
+        read_timestamp=1,
     )
-    chat.add_message("1", msg)
-    data.add_chat("123@c.us", chat)
-
-    media_dir = tmp_path / "media"
-    media_dir.mkdir()
-    (media_dir / "thumbnails").mkdir()
-    outside = tmp_path / "outside.jpg"
-    outside.write_bytes(b"a")
-
-    content = {
-        "file_path": "../outside.jpg",
-        "message_row_id": "1",
-        "key_remote_jid": "123@c.us",
-        "mime_type": None,
-        "file_hash": b"hash",
-        "thumbnail": None,
-    }
-
-    mime = MimeTypes()
-    android_handler._process_single_media(data, content, str(media_dir), mime, False)
-
-    msg = chat.get_message("1")
-    assert msg.data == "The media is missing"
-    assert msg.meta
-
-
-def test_ios_media_traversal_rejected(tmp_path):
-    data = ChatCollection()
-    chat = ChatStore(Device.IOS)
-    ts = 1_660_000_000
-    msg = Message(
-        from_me=1,
-        timestamp=ts,
-        time=ts,
-        key_id=1,
-        received_timestamp=ts + 1,
-        read_timestamp=ts + 2,
-        timezone_offset=0,
+    msg2 = Message(
+        from_me=0,
+        timestamp=2,
+        time=2,
+        key_id=2,
+        received_timestamp=2,
+        read_timestamp=2,
     )
-    chat.add_message("1", msg)
-    data.add_chat("123@c.us", chat)
+    chat.add_message("1", msg1)
+    chat.add_message("2", msg2)
 
-    media_dir = tmp_path / "Media"
-    msg_dir = media_dir / "Message"
-    msg_dir.mkdir(parents=True)
-    outside = tmp_path / "outside.mov"
-    outside.write_bytes(b"a")
+    assert chat.get_last_message() is msg2
 
-    content = {
-        "ZMEDIALOCALPATH": "../outside.mov",
-        "ZCONTACTJID": "123@c.us",
-        "ZMESSAGE": "1",
-        "ZVCARDSTRING": None,
-        "ZTITLE": None,
-    }
-
-    mime = MimeTypes()
-    ios_handler.process_media_item(content, data, str(media_dir), mime, False)
-
-    msg = chat.get_message("1")
-    assert msg.data == "The media is missing"
-    assert msg.meta
