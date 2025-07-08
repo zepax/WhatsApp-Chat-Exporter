@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import hmac
 import javaobj
 import zlib
@@ -51,7 +50,6 @@ for i in range(100):
                 exit()
 
 print("Not found! Try to increase maximum search.")
-=======
 import hmac
 import javaobj
 import zlib
@@ -104,4 +102,3 @@ for i in range(100):
                 exit()
 
 print("Not found! Try to increase maximum search.")
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0

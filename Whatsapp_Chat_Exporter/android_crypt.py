@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import hmac
 import io
 import zlib
@@ -338,7 +337,6 @@ def decrypt_backup(
         with open(output, "wb") as f:
             f.write(db)
     return 0
-=======
 import hmac
 import io
 import zlib
@@ -678,4 +676,3 @@ def decrypt_backup(
         with open(output, "wb") as f:
             f.write(db)
     return 0
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0

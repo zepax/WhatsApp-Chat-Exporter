@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #!/usr/bin/python3
 
 import os
@@ -728,7 +727,6 @@ def format_call_data(call, content):
         call_data += "in an unknown state."
 
     return call_data
-=======
 #!/usr/bin/python3
 
 import os
@@ -1425,4 +1423,3 @@ def format_call_data(call, content):
         call_data += "in an unknown state."
 
     return call_data
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0

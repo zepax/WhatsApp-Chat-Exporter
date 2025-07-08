@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 const fs = require('fs-extra');
 const marked = require('marked');
 const path = require('path');
@@ -488,7 +487,6 @@ const finalHTML = generateHTML(htmlContent);
 fs.writeFileSync('docs/index.html', finalHTML);
 
 console.log('Website generated successfully!');
-=======
 const fs = require('fs-extra');
 const marked = require('marked');
 const path = require('path');
@@ -978,4 +976,3 @@ const finalHTML = generateHTML(htmlContent);
 fs.writeFileSync('docs/index.html', finalHTML);
 
 console.log('Website generated successfully!');
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0

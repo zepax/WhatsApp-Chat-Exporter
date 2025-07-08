@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ---
 name: Bug report
 about: Create a report to help us improve
@@ -36,7 +35,6 @@ If applicable, add screenshots to help explain your problem.
 
 **Additional context**
 Add any other context about the problem here.
-=======
 ---
 name: Bug report
 about: Create a report to help us improve
@@ -74,4 +72,3 @@ If applicable, add screenshots to help explain your problem.
 
 **Additional context**
 Add any other context about the problem here.
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0

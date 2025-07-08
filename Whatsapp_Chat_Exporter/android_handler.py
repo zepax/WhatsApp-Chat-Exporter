@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #!/usr/bin/python3
 
 import sqlite3
@@ -1404,7 +1403,6 @@ def _format_message_for_txt(message, contact):
         )
 
     return f"{prefix}{message_text}"
-=======
 #!/usr/bin/python3
 
 import sqlite3
@@ -2777,4 +2775,3 @@ def _format_message_for_txt(message, contact):
         )
 
     return f"{prefix}{message_text}"
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0

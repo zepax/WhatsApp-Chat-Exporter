@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import subprocess
 import unittest
 import tempfile
@@ -283,7 +282,6 @@ END:VCARD
 
 if __name__ == '__main__':
     unittest.main()
-=======
 import subprocess
 import unittest
 import tempfile
@@ -568,4 +566,3 @@ END:VCARD
 
 if __name__ == '__main__':
     unittest.main()
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0

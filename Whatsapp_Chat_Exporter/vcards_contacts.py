@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import vobject
 from typing import List, TypedDict
 
@@ -87,7 +86,6 @@ def normalize_number(number: str, country_code: str) -> str:
             return number
 
     return country_code + number
-=======
 import vobject
 from typing import List, TypedDict
 
@@ -176,4 +174,3 @@ def normalize_number(number: str, country_code: str) -> str:
             return number
 
     return country_code + number
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0

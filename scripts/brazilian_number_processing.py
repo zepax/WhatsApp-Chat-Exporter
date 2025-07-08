@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """
 Utility functions to normalise and format telephone numbers found in VCARD
 files.  Originally tailored for Brazilian numbers, the implementation now relies
@@ -102,7 +101,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     process_vcard(args.input_vcard, args.output_vcard, args.region)
-=======
 """
 Utility functions to normalise and format telephone numbers found in VCARD
 files.  Originally tailored for Brazilian numbers, the implementation now relies
@@ -205,6 +203,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    process_vcard(args.input_vcard, args.output_vcard, args.region)
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0
-    print(f"VCARD processed and saved to {args.output_vcard}")
+    process_vcard(args.input_vcard, args.output_vcard, args.region)    print(f"VCARD processed and saved to {args.output_vcard}")

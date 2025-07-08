@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #!/usr/bin/python3
 
 import os
@@ -227,7 +226,6 @@ def prompt_for_user_identification(name):
             return name
         if ans == "n":
             return ""
-=======
 #!/usr/bin/python3
 
 import os
@@ -456,4 +454,3 @@ def prompt_for_user_identification(name):
             return name
         if ans == "n":
             return ""
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0

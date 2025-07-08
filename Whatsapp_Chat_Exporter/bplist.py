@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #################################################################################
 # Copyright (C) 2009-2011 Vladimir "Farcaller" Pouzanov <farcaller@gmail.com>   #
 #                                                                               #
@@ -286,7 +285,6 @@ if __name__ == "__main__":
 
     with open(file_path + ".json", "w") as fp:
         json.dump(out, indent=4)
-=======
 #################################################################################
 # Copyright (C) 2009-2011 Vladimir "Farcaller" Pouzanov <farcaller@gmail.com>   #
 #                                                                               #
@@ -574,4 +572,3 @@ if __name__ == "__main__":
 
     with open(file_path + ".json", "w") as fp:
         json.dump(out, indent=4)
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0

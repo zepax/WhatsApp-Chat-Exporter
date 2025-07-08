@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import os
 from datetime import datetime, tzinfo, timedelta
 from typing import MutableMapping, Union, Optional, Dict, Any
@@ -338,7 +337,6 @@ class Message:
             "thumb": self.thumb,
             "sticker": self.sticker,
         }
-=======
 import os
 from datetime import datetime, tzinfo, timedelta
 from typing import MutableMapping, Union, Optional, Dict, Any
@@ -678,4 +676,3 @@ class Message:
             "thumb": self.thumb,
             "sticker": self.sticker,
         }
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0

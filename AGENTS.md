@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Exportador de WhatsApp a HTML/JSON/PDF
 **name:** Exportador de WhatsApp a HTML/JSON/PDF
 ## 🟢 Main Objective
@@ -112,7 +111,6 @@ export/
 
 The agent must deliver clean, safe, and well-tested code that fulfills the goal of exporting and navigating WhatsApp information in a simple and private way, strictly following all the rules above.
 ```
-=======
 # Exportador de WhatsApp a HTML/JSON/PDF
 **name:** Exportador de WhatsApp a HTML/JSON/PDF
 ## 🟢 Main Objective
@@ -226,4 +224,3 @@ export/
 
 The agent must deliver clean, safe, and well-tested code that fulfills the goal of exporting and navigating WhatsApp information in a simple and private way, strictly following all the rules above.
 ```
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0

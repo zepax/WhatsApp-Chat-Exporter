@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #!/usr/bin/python3
 
 import shutil
@@ -262,7 +261,6 @@ def extract_media(base_dir, identifiers, decrypt_chunk_size):
     extractor = BackupExtractor(base_dir, identifiers, decrypt_chunk_size)
     extractor.extract()
 
-=======
 #!/usr/bin/python3
 
 import shutil
@@ -526,4 +524,3 @@ def extract_media(base_dir, identifiers, decrypt_chunk_size):
     extractor = BackupExtractor(base_dir, identifiers, decrypt_chunk_size)
     extractor.extract()
 
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0
