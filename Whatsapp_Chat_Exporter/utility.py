@@ -135,6 +135,13 @@ def extract_archive(path: str) -> str:
 
     if zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as zf:
+            # Validate ZIP file paths to prevent path traversal
+            for member in zf.namelist():
+                # Normalize the path and check for traversal attempts
+                target = os.path.normpath(os.path.join(tmp_dir, member))
+                if not target.startswith(os.path.abspath(tmp_dir) + os.sep):
+                    shutil.rmtree(tmp_dir)
+                    raise ValueError(f"Unsafe path detected in archive: {member}")
             zf.extractall(tmp_dir)
     else:
         try:
@@ -370,12 +377,23 @@ def get_cond_for_empty(enable: bool, jid_field: str, broadcast_field: str) -> st
         broadcast_field: The column name of the broadcast field in the SQL query.
 
     Returns:
-        A SQL condition string.
+        A tuple of (SQL condition string, list of parameters).
     """
-    return f"AND (chat.hidden=0 OR {jid_field}='status@broadcast' OR {broadcast_field}>0)" if enable else ""
+    if enable:
+        # Validate field names to prevent SQL injection
+        import re
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$', jid_field):
+            raise ValueError(f"Invalid JID field name: {jid_field}")
+        
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$', broadcast_field):
+            raise ValueError(f"Invalid broadcast field name: {broadcast_field}")
+        
+        return f"AND (chat.hidden=0 OR {jid_field}='status@broadcast' OR {broadcast_field}>0)"
+    else:
+        return ""
 
 
-def get_chat_condition(filter: Optional[List[str]], include: bool, columns: List[str], jid: Optional[str] = None, platform: Optional[str] = None) -> str:
+def get_chat_condition(filter: Optional[List[str]], include: bool, columns: List[str], jid: Optional[str] = None, platform: Optional[str] = None) -> tuple[str, list]:
     """Generates a SQL condition for filtering chats based on inclusion or exclusion criteria.
 
     Args:
@@ -386,7 +404,7 @@ def get_chat_condition(filter: Optional[List[str]], include: bool, columns: List
         platform: The platform ("android" or "ios") for platform-specific JID queries.
 
     Returns:
-        A SQL condition string.
+        A tuple of (SQL condition string, list of parameters).
 
     Raises:
         ValueError: If the column count is invalid or an unsupported platform is provided.
@@ -773,6 +791,13 @@ def extract_archive(path: str) -> str:
 
     if zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as zf:
+            # Validate ZIP file paths to prevent path traversal
+            for member in zf.namelist():
+                # Normalize the path and check for traversal attempts
+                target = os.path.normpath(os.path.join(tmp_dir, member))
+                if not target.startswith(os.path.abspath(tmp_dir) + os.sep):
+                    shutil.rmtree(tmp_dir)
+                    raise ValueError(f"Unsafe path detected in archive: {member}")
             zf.extractall(tmp_dir)
     else:
         try:
@@ -1008,12 +1033,23 @@ def get_cond_for_empty(enable: bool, jid_field: str, broadcast_field: str) -> st
         broadcast_field: The column name of the broadcast field in the SQL query.
 
     Returns:
-        A SQL condition string.
+        A tuple of (SQL condition string, list of parameters).
     """
-    return f"AND (chat.hidden=0 OR {jid_field}='status@broadcast' OR {broadcast_field}>0)" if enable else ""
+    if enable:
+        # Validate field names to prevent SQL injection
+        import re
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$', jid_field):
+            raise ValueError(f"Invalid JID field name: {jid_field}")
+        
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$', broadcast_field):
+            raise ValueError(f"Invalid broadcast field name: {broadcast_field}")
+        
+        return f"AND (chat.hidden=0 OR {jid_field}='status@broadcast' OR {broadcast_field}>0)"
+    else:
+        return ""
 
 
-def get_chat_condition(filter: Optional[List[str]], include: bool, columns: List[str], jid: Optional[str] = None, platform: Optional[str] = None) -> str:
+def get_chat_condition(filter: Optional[List[str]], include: bool, columns: List[str], jid: Optional[str] = None, platform: Optional[str] = None) -> tuple[str, list]:
     """Generates a SQL condition for filtering chats based on inclusion or exclusion criteria.
 
     Args:
@@ -1024,7 +1060,7 @@ def get_chat_condition(filter: Optional[List[str]], include: bool, columns: List
         platform: The platform ("android" or "ios") for platform-specific JID queries.
 
     Returns:
-        A SQL condition string.
+        A tuple of (SQL condition string, list of parameters).
 
     Raises:
         ValueError: If the column count is invalid or an unsupported platform is provided.
@@ -1271,4 +1307,3 @@ class JidType(IntEnum):
     GROUP = 1
     SYSTEM_BROADCAST = 5
     STATUS = 11
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0
