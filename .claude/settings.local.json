@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rg:*)",
+      "Bash(python -m pytest Whatsapp_Chat_Exporter/test_message.py::test_fetch_row_safely_success -v)",
+      "Bash(find:*)",
+      "Bash(python:*)"
+    ],
+    "deny": []
+  }
+}
