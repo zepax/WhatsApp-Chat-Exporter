@@ -370,14 +370,32 @@ def _get_messages_cursor_new(cursor, filter_empty, filter_date, filter_chat):
     return cursor
 
 
-def _fetch_row_safely(cursor):
-    """Safely fetch a row from cursor, handling operational errors."""
-    while True:
+def _fetch_row_safely(cursor, max_retries=3):
+    """Safely fetch a row from cursor, handling operational errors with retry limit.
+    
+    Args:
+        cursor: Database cursor to fetch from
+        max_retries: Maximum number of retry attempts (default: 3)
+        
+    Returns:
+        Row data or None if no more rows
+        
+    Raises:
+        sqlite3.OperationalError: If database operation fails after all retries
+    """
+    import time
+    
+    for attempt in range(max_retries):
         try:
             content = cursor.fetchone()
             return content
-        except sqlite3.OperationalError:
-            continue
+        except sqlite3.OperationalError as e:
+            if attempt == max_retries - 1:
+                logger.error(f"Database operation failed after {max_retries} attempts: {e}")
+                raise sqlite3.OperationalError(f"Failed to fetch row after {max_retries} attempts: {e}") from e
+            
+            logger.warning(f"Database operation failed (attempt {attempt + 1}/{max_retries}): {e}")
+            time.sleep(0.1 * (attempt + 1))  # Progressive backoff delay
 
 
 def _process_single_message(data, content, table_message, timezone_offset):

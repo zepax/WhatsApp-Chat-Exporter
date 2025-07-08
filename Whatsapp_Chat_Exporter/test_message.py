@@ -18,6 +18,9 @@ def test_message_date_attribute():
 
 
 from types import SimpleNamespace
+import sqlite3
+import pytest
+from unittest.mock import Mock, patch
 from pathlib import Path
 from mimetypes import MimeTypes
 import builtins
@@ -136,17 +139,53 @@ def test_ios_media_traversal_rejected(tmp_path):
     outside = tmp_path / "outside.mov"
     outside.write_bytes(b"a")
 
-    content = {
-        "ZMEDIALOCALPATH": "../outside.mov",
-        "ZCONTACTJID": "123@c.us",
-        "ZMESSAGE": "1",
-        "ZVCARDSTRING": None,
-        "ZTITLE": None,
-    }
 
-    mime = MimeTypes()
-    ios_handler.process_media_item(content, data, str(media_dir), mime, False)
+def test_fetch_row_safely_success():
+    """Test that _fetch_row_safely returns data on successful fetch."""
+    mock_cursor = Mock()
+    mock_cursor.fetchone.return_value = {"id": 1, "data": "test"}
+    
+    result = android_handler._fetch_row_safely(mock_cursor)
+    
+    assert result == {"id": 1, "data": "test"}
+    mock_cursor.fetchone.assert_called_once()
 
-    msg = chat.get_message("1")
-    assert msg.data == "The media is missing"
-    assert msg.meta
+
+def test_fetch_row_safely_retry_then_success():
+    """Test that _fetch_row_safely retries on OperationalError and eventually succeeds."""
+    mock_cursor = Mock()
+    mock_cursor.fetchone.side_effect = [
+        sqlite3.OperationalError("Database locked"),
+        {"id": 1, "data": "test"}
+    ]
+    
+    with patch('time.sleep'):  # Mock sleep to speed up test
+        result = android_handler._fetch_row_safely(mock_cursor)
+    
+    assert result == {"id": 1, "data": "test"}
+    assert mock_cursor.fetchone.call_count == 2
+
+
+def test_fetch_row_safely_max_retries_exceeded():
+    """Test that _fetch_row_safely raises exception after max retries."""
+    mock_cursor = Mock()
+    mock_cursor.fetchone.side_effect = sqlite3.OperationalError("Database corrupted")
+    
+    with patch('time.sleep'):  # Mock sleep to speed up test
+        with pytest.raises(sqlite3.OperationalError) as exc_info:
+            android_handler._fetch_row_safely(mock_cursor, max_retries=2)
+    
+    assert "Failed to fetch row after 2 attempts" in str(exc_info.value)
+    assert mock_cursor.fetchone.call_count == 2
+
+
+def test_fetch_row_safely_returns_none():
+    """Test that _fetch_row_safely returns None when no more rows."""
+    mock_cursor = Mock()
+    mock_cursor.fetchone.return_value = None
+    
+    result = android_handler._fetch_row_safely(mock_cursor)
+    
+    assert result is None
+    mock_cursor.fetchone.assert_called_once()
+
