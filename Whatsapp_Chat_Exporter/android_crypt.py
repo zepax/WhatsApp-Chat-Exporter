@@ -3,18 +3,16 @@ import hmac
 import io
 import logging
 import zlib
-import Crypto
 from hashlib import sha256
 from sys import exit
 from typing import Tuple, Union
+
 
 from Whatsapp_Chat_Exporter.utility import CRYPT14_OFFSETS, Crypt, DbType
 
 logger = logging.getLogger(__name__)
 
 try:
-    import zlib
-
     from Crypto.Cipher import AES
 except ModuleNotFoundError:
     support_backup = False
