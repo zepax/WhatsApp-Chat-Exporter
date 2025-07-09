@@ -17,6 +17,7 @@ from typing import Dict, List, Optional
 
 import aiofiles
 import psutil
+import rich
 from rich.progress import track
 
 from Whatsapp_Chat_Exporter import (
@@ -695,10 +696,10 @@ def decrypt_android_backup(args) -> int:
         error_wa = android_crypt.decrypt_backup(
             wab,
             key,
-            args.wa,
-            crypt,
-            args.showkey,
-            DbType.CONTACT,
+            output=args.wa,
+            crypt=crypt,
+            show_crypt15=args.showkey,
+            db_type=DbType.CONTACT,
             max_worker=args.max_bruteforce_worker,
         )
 
@@ -706,10 +707,10 @@ def decrypt_android_backup(args) -> int:
     error_message = android_crypt.decrypt_backup(
         db,
         key,
-        args.db,
-        crypt,
-        args.showkey,
-        DbType.MESSAGE,
+        output=args.db,
+        crypt=crypt,
+        show_crypt15=args.showkey,
+        db_type=DbType.MESSAGE,
         max_worker=args.max_bruteforce_worker,
     )
 
@@ -933,7 +934,7 @@ def export_json(args, data: ChatCollection, contact_store=None) -> None:
         contact_store.enrich_from_vcards(data)
 
     # Convert ChatStore objects to JSON
-    if isinstance(data.get(next(iter(data), None)), ChatStore):
+    if data and isinstance(data.get(next(iter(data))), ChatStore):
         data = {jik: chat.to_json() for jik, chat in data.items()}
 
     # Export as a single file or per chat
@@ -1014,7 +1015,7 @@ def export_multiple_json(args, data: Dict) -> None:
                 ensure_ascii=not args.avoid_encoding_json,
                 indent=args.pretty_print_json,
             )
-        f.write(file_content)
+            f.write(file_content)
         logger.info("Writing JSON file...(%d/%d)", index, total)
     logger.info("")
 
