@@ -1,0 +1,22 @@
+{
+    "name": "Android Basic Test",
+    "description": "Configuración básica para pruebas con base de datos Android desencriptada",
+    "platform": "android",
+    "encrypted": false,
+    "files": {
+        "msgstore_db": "android/databases/msgstore.db",
+        "wa_db": "android/databases/wa.db",
+        "media_dir": "android/WhatsApp"
+    },
+    "options": {
+        "output_formats": ["html", "json"],
+        "include_media": true,
+        "generate_summary": true,
+        "verbose": true
+    },
+    "expected_outputs": [
+        "result.json",
+        "summary.json",
+        "*.html"
+    ]
+}

@@ -1,5 +1,16 @@
 # Byte-compiled / optimized / DLL files
+
 __pycache__/
+
+# Test environment with sensitive data
+test_environment/android/databases/
+test_environment/android/keys/
+test_environment/android/WhatsApp/
+test_environment/ios/backup/
+test_environment/ios/media/
+test_environment/exported/*.txt
+test_environment/output/
+test_environment/.env
 *.py[cod]
 *$py.class
 
@@ -144,6 +155,7 @@ WhatsApp/
 /myout
 /msgstore.db
 /myout-json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

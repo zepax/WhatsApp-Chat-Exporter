@@ -1,0 +1,28 @@
+{
+    "name": "Exported Chat Test",
+    "description": "Configuración para pruebas con archivos de chat exportados (.txt)",
+    "platform": "exported",
+    "encrypted": false,
+    "files": {
+        "chat_file": "exported/*.txt",
+        "media_files": "exported/{*.jpg,*.png,*.mp4,*.ogg,*.pdf}"
+    },
+    "options": {
+        "output_formats": ["html", "json"],
+        "include_media": true,
+        "generate_summary": true,
+        "participant_detection": "auto",
+        "verbose": true
+    },
+    "participant_modes": {
+        "auto": "Detección automática de participantes",
+        "assume_first": "Asumir primer mensaje como propio",
+        "prompt": "Preguntar interactivamente"
+    },
+    "expected_outputs": [
+        "result.json",
+        "summary.json",
+        "*.html",
+        "media/"
+    ]
+}
