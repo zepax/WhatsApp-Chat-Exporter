@@ -1,0 +1,32 @@
+# .pre-commit-config.yaml
+repos:
+  # 1. Black ─ formateo consistente
+  - repo: https://github.com/psf/black
+    rev: 24.4.2        # fíjalo a una versión estable
+    hooks:
+      - id: black
+        language_version: python3   # usa el Python de tu venv
+        args: ["--line-length", "88"]
+
+  # 2. isort ─ ordena imports antes de que Black formatee
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+
+  # 3. Ruff ─ linting y reglas de estilo ultrarrápidas
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff
+        args: ["--fix"]          # corrige auto‐lintable issues
+      - id: ruff-format          # formateo adicional de Ruff (opcional)
+
+  # 4. mypy ─ chequeo estático de tipos
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        additional_dependencies: ["types-requests"]   # agrega paquetes de tipos que uses
+        args: ["--strict"]         # usa el modo estricto, si prefieres suavizar quita este flag

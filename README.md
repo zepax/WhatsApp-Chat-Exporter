@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Whatsapp-Chat-Exporter
 [![Latest in PyPI](https://img.shields.io/pypi/v/whatsapp-chat-exporter?label=Latest%20in%20PyPI)](https://pypi.org/project/whatsapp-chat-exporter/)
 [![License MIT](https://img.shields.io/pypi/l/whatsapp-chat-exporter?color=427B93)](https://github.com/KnugiHK/WhatsApp-Chat-Exporter/blob/main/LICENSE)
@@ -267,7 +266,6 @@ The Telegram Desktop's export is the reference for whatsapp.html in this repo.
 Please also refer to any files prefixed with `LICENSE` to obtain copies of the various licenses.
 
 WhatsApp Chat Exporter is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the WhatsApp LLC, or any of its subsidiaries or its affiliates. The official WhatsApp LLC website can be found at https://www.whatsapp.com/.
-=======
 # Whatsapp-Chat-Exporter
 [![Latest in PyPI](https://img.shields.io/pypi/v/whatsapp-chat-exporter?label=Latest%20in%20PyPI)](https://pypi.org/project/whatsapp-chat-exporter/)
 [![License MIT](https://img.shields.io/pypi/l/whatsapp-chat-exporter?color=427B93)](https://github.com/KnugiHK/WhatsApp-Chat-Exporter/blob/main/LICENSE)
@@ -536,4 +534,3 @@ The Telegram Desktop's export is the reference for whatsapp.html in this repo.
 Please also refer to any files prefixed with `LICENSE` to obtain copies of the various licenses.
 
 WhatsApp Chat Exporter is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the WhatsApp LLC, or any of its subsidiaries or its affiliates. The official WhatsApp LLC website can be found at https://www.whatsapp.com/.
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0

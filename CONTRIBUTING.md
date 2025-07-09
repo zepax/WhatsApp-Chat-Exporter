@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Contributing Guidelines
 
 *Pull requests, bug reports, and all other forms of contribution are welcomed and highly encouraged!*
@@ -62,7 +61,6 @@ If your contribution includes code from other open-source projects, ensure that 
 ## :pray: Credit
 
 This contribution guidelines is remixed from [jessesquires/.github:CONTRIBUTING.md](https://github.com/jessesquires/.github/blob/main/CONTRIBUTING.md) which also incorporated other works. *We commend them for their efforts to facilitate collaboration in their projects.*
-=======
 # Contributing Guidelines
 
 *Pull requests, bug reports, and all other forms of contribution are welcomed and highly encouraged!*
@@ -126,4 +124,3 @@ If your contribution includes code from other open-source projects, ensure that 
 ## :pray: Credit
 
 This contribution guidelines is remixed from [jessesquires/.github:CONTRIBUTING.md](https://github.com/jessesquires/.github/blob/main/CONTRIBUTING.md) which also incorporated other works. *We commend them for their efforts to facilitate collaboration in their projects.*
->>>>>>> 0b087d242fb332e1e94c87caa74b2b5dc3ef79a0
