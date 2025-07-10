@@ -1,205 +1,204 @@
 FILTERED CONVERSATIONS SUMMARY
 ========================================
 
-Total conversations with keyword matches: 54
+Total conversations with keyword matches: 50
 Filter applied: Conversations with at least 1 keyword match
-Generated: 2025-07-09 21:37:08
+Generated: 2025-07-09 22:02:32
 
 STATISTICS
 --------------------
-Total keyword matches: 931
-Total messages in filtered conversations: 7064
-Total words in filtered conversations: 5564786
-Average keywords per conversation: 17.2
+Total keyword matches: 819
+Total messages in filtered conversations: 6904
+Total words in filtered conversations: 5454155
+Average keywords per conversation: 16.4
 
 TOP KEYWORDS IN FILTERED CONVERSATIONS
 -----------------------------------
-me vine: 176
+me vine: 174
 sexo: 163
 besos: 85
-sex: 58
 cogimos: 57
-bra: 46
-cogiendo: 41
+bra: 45
 condon: 36
 motel: 32
 cogi: 32
+besamos: 28
+cogida: 23
 
 FILTERED CONVERSATIONS LIST
 -------------------------
-  1. 5216621714521-Karla Navarro.html (407 matches)
+  1. 5216621714521-Karla Navarro.html (354 matches)
       - sexo: 99
       - me vine: 44
-      - sex: 36
+      - besos: 31
 
-  2. 5216623402020-Ale.html (47 matches)
+  2. 5216623402020-Ale.html (46 matches)
       - me vine: 26
       - besos: 11
       - mojada: 4
 
-  3. 5216623183988-Alba Gurrola .html (33 matches)
-      - sexo: 10
-      - me vine: 5
-      - motel: 4
-
-  4. 5216621433500-Andrea Leyva.html (32 matches)
-      - cogimos: 5
-      - cogi: 5
-      - sex: 4
-
-  5. 5216621829223-Patti.html (30 matches)
+  3. 5216621829223-Patti.html (28 matches)
       - cogimos: 5
       - cogen: 4
       - me vine: 3
 
-  6. 5216621885661-Diana Badilla.html (30 matches)
-      - me vine: 12
-      - cogiendo: 4
-      - cogimos: 4
+  4. 5216623183988-Alba Gurrola .html (28 matches)
+      - sexo: 10
+      - me vine: 5
+      - motel: 4
 
-  7. Fbg .html (24 matches)
+  5. 5216621885661-Diana Badilla.html (26 matches)
+      - me vine: 12
+      - cogimos: 4
+      - sexo: 4
+
+  6. 5216621433500-Andrea Leyva.html (26 matches)
+      - cogimos: 5
+      - cogi: 5
+      - me vine: 4
+
+  7. Fbg .html (22 matches)
       - sexo: 6
       - me vine: 4
       - bra: 4
 
-  8. SoulSisters.html (19 matches)
-      - sexo: 4
-      - cogiendo: 3
-      - bra: 2
-
-  9. 120363040181208354-B de EXBichotas.html (17 matches)
-      - sex: 3
-      - sexo: 3
-      - cogi: 3
-
- 10. 5216622766391-Kvilla.html (16 matches)
+  8. 5216622766391-Kvilla.html (16 matches)
       - cogimos: 4
       - sexo: 4
       - me vine: 3
 
- 11. 5-5.html (15 matches)
+  9. 5-5.html (14 matches)
       - sexo: 5
       - me vine: 3
       - besos: 3
 
- 12. 5216621237898-Ma.html (14 matches)
+ 10. 5216621237898-Ma.html (14 matches)
       - bra: 6
       - me vine: 5
       - besos: 2
 
- 13. 5216621399591-Ariana Herrera.html (14 matches)
-      - me vine: 8
-      - cogimos: 2
-      - besos: 1
+ 11. SoulSisters.html (14 matches)
+      - sexo: 4
+      - bra: 2
+      - me vine: 2
 
- 14. Family .html (14 matches)
+ 12. Family .html (14 matches)
       - me vine: 6
       - besos: 5
       - round: 1
 
- 15. 5216623003681-Ernesto Symonds.html (12 matches)
-      - sexo: 6
-      - cogiendo: 2
-      - cogida: 1
+ 13. 5216621399591-Ariana Herrera.html (13 matches)
+      - me vine: 8
+      - cogimos: 2
+      - besos: 1
 
- 16. 5216623354138-Lucia Bustamante.html (11 matches)
-      - round: 2
-      - me vine: 2
-      - besos: 2
+ 14. 120363040181208354-B de EXBichotas.html (12 matches)
+      - sexo: 3
+      - cogi: 3
+      - me vine: 1
 
- 17. 5216621411354-Suegra.html (11 matches)
+ 15. 5216621411354-Suegra.html (11 matches)
       - me vine: 8
       - besos: 1
       - bra: 1
 
- 18. 5216621723861-Caro Wiessner.html (10 matches)
-      - sex: 2
+ 16. 5216623354138-Lucia Bustamante.html (10 matches)
+      - round: 2
       - me vine: 2
-      - sexo: 2
+      - besos: 2
 
- 19. 18438044610-Eva Felix.html (9 matches)
+ 17. 5216623003681-Ernesto Symonds.html (10 matches)
+      - sexo: 6
+      - cogida: 1
+      - cogi: 1
+
+ 18. 18438044610-Eva Felix.html (9 matches)
       - de perrito: 2
       - motel: 2
       - cogemos: 1
 
- 20. 15206032242-Julio Alejandro Portugal.html (8 matches)
-      - condon: 4
-      - cogiendo: 2
-      - condones: 1
-
- 21. Muelde Melesio .html (8 matches)
-      - tanga: 4
-      - bra: 1
-      - sexo: 1
-
- 22. 5216621872383-Ana Kossio.html (8 matches)
+ 19. 5216621872383-Ana Kossio.html (8 matches)
       - besos: 3
       - me vine: 2
       - cogimos: 1
 
- 23. 5216622812018-Edith Lugo.html (8 matches)
-      - sex: 3
-      - me vine: 1
-      - one night: 1
-
- 24. 120363206466363641-Jeje .html (7 matches)
+ 20. 120363206466363641-Jeje .html (7 matches)
       - baby doll: 4
       - lenceria: 2
       - bra: 1
 
- 25. 5216621431844-Pa.html (7 matches)
+ 21. Muelde Melesio .html (7 matches)
+      - tanga: 4
+      - bra: 1
+      - sexo: 1
+
+ 22. 5216621431844-Pa.html (7 matches)
       - me vine: 5
       - besos: 1
       - mojada: 1
 
- 26. 120363029659762544-Eli  Aris bach .html (7 matches)
-      - besamos: 2
-      - tanga: 1
-      - bra: 1
-
- 27. 5216622873727-Mariel Cuñada.html (7 matches)
+ 23. 5216622873727-Mariel Cuñada.html (7 matches)
       - me vine: 2
       - besamos: 1
       - cogen: 1
 
- 28. 5216621141168-Alexia.html (7 matches)
+ 24. 120363029659762544-Eli  Aris bach .html (7 matches)
+      - besamos: 2
+      - tanga: 1
+      - bra: 1
+
+ 25. 5216621141168-Alexia.html (7 matches)
       - me vine: 3
       - cogimos: 2
       - bra: 1
 
- 29. Becools .html (6 matches)
+ 26. Becools .html (6 matches)
       - besos: 4
       - mojada: 1
       - me vine: 1
 
- 30. 5216621121614-Carlitos Astiazaran.html (6 matches)
+ 27. 15206032242-Julio Alejandro Portugal.html (6 matches)
+      - condon: 4
+      - condones: 1
+      - me vine: 1
+
+ 28. 5216621723861-Caro Wiessner.html (6 matches)
+      - me vine: 2
+      - sexo: 2
+      - condones: 1
+
+ 29. 5216621121614-Carlitos Astiazaran.html (6 matches)
       - sexo: 3
       - squirt: 1
       - motel: 1
 
- 31. 5216623363887-Joselyne.html (6 matches)
+ 30. 5216623363887-Joselyne.html (6 matches)
       - me vine: 2
       - condon: 2
       - cogi: 1
 
- 32. 120363281975014870-ArisBridalBrunch09MAR25.html (5 matches)
+ 31. 120363281975014870-ArisBridalBrunch09MAR25.html (5 matches)
       - tanga: 2
       - bra: 2
       - baby doll: 1
 
- 33. 5216622338410-EML .html (5 matches)
-      - bra: 2
-      - cogiendo: 1
+ 32. 5216622812018-Edith Lugo.html (5 matches)
+      - me vine: 1
+      - one night: 1
       - cogi: 1
+
+ 33. 120363415870477435-TBG.html (4 matches)
+      - lenceria: 1
+      - round: 1
+      - me vine: 1
 
  34. 5216621019082-Karen Villa.html (4 matches)
       - me vine: 2
       - sexo: 1
       - besos: 1
 
- 35. 120363415870477435-TBG.html (4 matches)
-      - lenceria: 1
-      - round: 1
+ 35. 5216621154100-Jose Eduardo Ruiz Encinas.html (4 matches)
+      - besos: 3
       - me vine: 1
 
  36. 5216621047143-Dania.html (4 matches)
@@ -207,82 +206,63 @@ FILTERED CONVERSATIONS LIST
       - sexo: 1
       - motel: 1
 
- 37. 5216621154100-Jose Eduardo Ruiz Encinas.html (4 matches)
-      - besos: 3
-      - me vine: 1
-
- 38. 120363043651161292-DespedidaAlmitaSC2-4 Sep.html (4 matches)
-      - besos: 2
-      - condones: 1
-      - sex: 1
-
- 39. 120363044863280879-Roomies .html (4 matches)
+ 37. 120363044863280879-Roomies .html (4 matches)
       - motel: 1
       - tanga: 1
       - condon: 1
 
- 40. 19173859144-Cesar Munguia.html (4 matches)
+ 38. 19173859144-Cesar Munguia.html (4 matches)
       - cogimos: 1
       - bra: 1
       - motel: 1
 
- 41. 5216623185763-Elisa Garcia Bufanda.html (4 matches)
+ 39. 5216622338410-EML .html (4 matches)
+      - bra: 2
+      - cogi: 1
+      - me vine: 1
+
+ 40. 5216623185763-Elisa Garcia Bufanda.html (4 matches)
       - baby doll: 1
       - bra: 1
       - me vine: 1
 
- 42. 5216623269154-Paola Ochoa.html (3 matches)
+ 41. 5216623269154-Paola Ochoa.html (3 matches)
       - me vine: 2
       - cogimos: 1
 
- 43. 5216622971905-Carlos Chavez.html (3 matches)
+ 42. 5216622971905-Carlos Chavez.html (3 matches)
       - sexo: 3
 
- 44. 5216621551649-Carolina Hernández.html (3 matches)
+ 43. 5216621551649-Carolina Hernández.html (3 matches)
       - baby doll: 2
       - bra: 1
 
- 45. 12817802542-Francesca.html (3 matches)
-      - sex: 2
-      - one night: 1
-
- 46. 5216623602906-Melissa Herrera.html (3 matches)
+ 44. 5216623602906-Melissa Herrera.html (3 matches)
       - me vine: 2
       - besos: 1
 
- 47. 5216622290768-Fanny Fano.html (3 matches)
+ 45. 5216622290768-Fanny Fano.html (3 matches)
       - me vine: 2
       - cogen: 1
 
- 48. ALMITA  sab 8oct.html (3 matches)
+ 46. ALMITA  sab 8oct.html (3 matches)
       - bra: 2
       - lenceria: 1
 
- 49. 5216622240659-Flor Janette.html (3 matches)
+ 47. 5216622240659-Flor Janette.html (3 matches)
       - besos: 2
       - me vine: 1
 
- 50. 120363235682616281-Bach Karlita Valle Gpe .html (3 matches)
+ 48. 120363043651161292-DespedidaAlmitaSC2-4 Sep.html (3 matches)
+      - besos: 2
+      - condones: 1
+
+ 49. 120363235682616281-Bach Karlita Valle Gpe .html (3 matches)
       - de perrito: 1
       - cowboy: 1
       - bra: 1
 
- 51. 120363338781457174-Eventos diversos .html (3 matches)
-      - tanga: 1
-      - me vine: 1
-      - sex: 1
-
- 52. DespedidaEdith 3-5 Sept.html (3 matches)
-      - tanga: 1
-      - sex: 1
-      - bra: 1
-
- 53. 5216622339951-Teté.html (3 matches)
-      - cogiendo: 1
-      - squirt: 1
-      - me vine: 1
-
- 54. 5216622337177-Coke.html (3 matches)
+ 50. 5216622337177-Coke.html (3 matches)
       - me vine: 2
       - round: 1
 

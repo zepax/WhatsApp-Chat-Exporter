@@ -13,12 +13,19 @@ import multiprocessing
 import os
 import re
 import shutil
+import sqlite3
+import time
+import hashlib
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union, Any
+import traceback
+import signal
+import sys
+from functools import wraps
 
 try:
     from bs4 import BeautifulSoup
@@ -42,15 +49,169 @@ if not BS4_AVAILABLE and not LXML_AVAILABLE:
 
 try:
     import pandas as pd
-
     PANDAS_AVAILABLE = True
 except ImportError:
     PANDAS_AVAILABLE = False
 
+# Advanced dependencies
+try:
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.chart import BarChart, Reference
+    EXCEL_ADVANCED = True
+except ImportError:
+    EXCEL_ADVANCED = False
+
+try:
+    from textblob import TextBlob
+    SENTIMENT_AVAILABLE = True
+except ImportError:
+    SENTIMENT_AVAILABLE = False
+
+try:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    PLOTTING_AVAILABLE = True
+except ImportError:
+    PLOTTING_AVAILABLE = False
+
+try:
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
+
+try:
+    import flask
+    from flask import Flask, render_template, jsonify, request
+    WEB_DASHBOARD = True
+except ImportError:
+    WEB_DASHBOARD = False
+
+try:
+    import schedule
+    SCHEDULING_AVAILABLE = True
+except ImportError:
+    SCHEDULING_AVAILABLE = False
+
+
+# Advanced error handling decorators
+def retry_on_failure(max_retries: int = 3, delay: float = 1.0):
+    """Decorator to retry functions on failure with exponential backoff."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    if attempt < max_retries - 1:
+                        wait_time = delay * (2 ** attempt)
+                        time.sleep(wait_time)
+                        logging.warning(f"Attempt {attempt + 1} failed for {func.__name__}: {e}. Retrying in {wait_time}s...")
+                    else:
+                        logging.error(f"All {max_retries} attempts failed for {func.__name__}: {e}")
+            raise last_exception
+        return wrapper
+    return decorator
+
+def handle_errors(default_return=None, log_level=logging.ERROR):
+    """Decorator to handle errors gracefully and return default value."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                logging.log(log_level, f"Error in {func.__name__}: {e}")
+                logging.debug(f"Traceback: {traceback.format_exc()}")
+                return default_return
+        return wrapper
+    return decorator
 
 @dataclass
+class AdvancedAnalysisResult:
+    """Enhanced data class with more detailed analysis results."""
+    
+    file_name: str
+    file_path: str
+    file_size_kb: float
+    file_hash: str
+    total_messages: int
+    total_words: int
+    keyword_matches: Dict[str, int]
+    sentiment_score: Optional[float] = None
+    language_detected: Optional[str] = None
+    participants: List[str] = None
+    date_range: Tuple[str, str] = None
+    message_frequency: Dict[str, int] = None  # Messages per hour/day
+    media_count: Dict[str, int] = None  # photos, videos, documents
+    topics_detected: List[str] = None
+    processing_time: float = 0.0
+    timestamp: str = ""
+    errors: List[str] = None
+
+    def __post_init__(self):
+        if not self.timestamp:
+            self.timestamp = datetime.now().isoformat()
+        if self.participants is None:
+            self.participants = []
+        if self.message_frequency is None:
+            self.message_frequency = {}
+        if self.media_count is None:
+            self.media_count = {}
+        if self.topics_detected is None:
+            self.topics_detected = []
+        if self.errors is None:
+            self.errors = []
+
+@dataclass
+class AnalysisConfig:
+    """Configuration class for analysis settings."""
+    
+    # Search settings
+    keywords: List[str]
+    use_regex: bool = False
+    case_sensitive: bool = False
+    include_dates: bool = True
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    participants_filter: List[str] = None
+    
+    # Processing settings
+    max_workers: int = None
+    use_cache: bool = True
+    cache_directory: str = ".cache"
+    
+    # Analysis features
+    sentiment_analysis: bool = False
+    language_detection: bool = False
+    topic_extraction: bool = False
+    
+    # Security settings
+    anonymize_data: bool = False
+    encrypt_output: bool = False
+    
+    # Output settings
+    generate_excel: bool = False
+    generate_pdf: bool = False
+    generate_dashboard: bool = False
+    
+    def __post_init__(self):
+        if self.max_workers is None:
+            self.max_workers = multiprocessing.cpu_count()
+        if self.participants_filter is None:
+            self.participants_filter = []
+
+# Legacy compatibility
+@dataclass
 class AnalysisResult:
-    """Data class to store analysis results."""
+    """Data class to store analysis results (legacy compatibility)."""
 
     file_name: str
     total_messages: int
@@ -65,21 +226,101 @@ class AnalysisResult:
             self.timestamp = datetime.now().isoformat()
 
 
-class ContentAnalyzer:
-    """Professional content analyzer for WhatsApp chat exports."""
+class AdvancedContentAnalyzer:
+    """Next-generation professional content analyzer for WhatsApp chat exports."""
 
+    def __init__(
+        self, 
+        config_file: Optional[str] = None, 
+        config: Optional[AnalysisConfig] = None,
+        cache_enabled: bool = True
+    ):
+        """Initialize the advanced analyzer with comprehensive configuration."""
+        self.setup_advanced_logging()
+        
+        # Core data storage
+        self.results: List[AdvancedAnalysisResult] = []
+        self.legacy_results: List[AnalysisResult] = []  # Backward compatibility
+        
+        # Configuration
+        self.config = config or self._load_configuration(config_file)
+        
+        # Pattern compilation
+        self.keyword_patterns: Dict[str, re.Pattern] = {}
+        self.combined_pattern: Optional[re.Pattern] = None
+        self.regex_patterns: Dict[str, re.Pattern] = {}
+        
+        # Processing state
+        self.source_directory: Optional[str] = None
+        self.current_file_count = 0
+        self.total_file_count = 0
+        self.start_time = None
+        
+        # Cache system
+        self.cache_enabled = cache_enabled and self.config.use_cache
+        self.cache_db_path = Path(self.config.cache_directory) / "analysis_cache.db"
+        self._init_cache_system()
+        
+        # Advanced features
+        self._init_sentiment_analyzer()
+        self._init_topic_extractor()
+        
+        # Signal handling for graceful shutdown
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
+        
+        self._compile_patterns()
+
+    def _signal_handler(self, signum, frame):
+        """Handle shutdown signals gracefully."""
+        self.logger.info("Received shutdown signal. Cleaning up...")
+        self._cleanup()
+        sys.exit(0)
+
+    def _cleanup(self):
+        """Clean up resources."""
+        if hasattr(self, 'cache_connection') and self.cache_connection:
+            self.cache_connection.close()
+
+class ContentAnalyzer(AdvancedContentAnalyzer):
+    """Backward-compatible wrapper for the advanced analyzer."""
+    
     def __init__(
         self, config_file: Optional[str] = None, max_workers: Optional[int] = None
     ):
-        """Initialize the analyzer with optional configuration."""
-        self.setup_logging()
-        self.results: List[AnalysisResult] = []
-        self.keyword_patterns: Dict[str, re.Pattern] = {}
-        self.combined_pattern: Optional[re.Pattern] = None
-        self.keywords_list: List[str] = []
-        self.max_workers = max_workers or multiprocessing.cpu_count()
-        self.source_directory: Optional[str] = None
-        self.load_configuration(config_file)
+        """Initialize with legacy interface."""
+        # Create legacy config
+        if config_file:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config_data = json.load(f)
+                keywords = config_data.get('keywords', [])
+        else:
+            keywords = self._get_default_keywords()
+            
+        config = AnalysisConfig(
+            keywords=keywords,
+            max_workers=max_workers or multiprocessing.cpu_count(),
+            use_cache=True
+        )
+        
+        super().__init__(config=config)
+        
+        # Legacy compatibility attributes
+        self.keywords_list = self.config.keywords
+        self.max_workers = self.config.max_workers
+
+    def _get_default_keywords(self) -> List[str]:
+        """Return default keywords for general content analysis."""
+        return [
+            # Emotional indicators
+            "happy", "sad", "angry", "excited", "frustrated", "love", "hate",
+            # Communication patterns
+            "meeting", "call", "video", "photo", "document", "location",
+            # Time indicators
+            "today", "tomorrow", "yesterday", "morning", "afternoon", "evening",
+            # Common actions
+            "sent", "received", "deleted", "forwarded", "replied",
+        ]
 
     def setup_logging(self):
         """Set up logging configuration."""
@@ -528,6 +769,12 @@ class ContentAnalyzer:
         # Create filtered conversations directory
         output_path = Path(output_dir)
         filtered_dir = output_path / "filtered_conversations"
+        
+        # Clear existing directory if it exists
+        if filtered_dir.exists():
+            self.logger.info(f"Clearing existing directory: {filtered_dir}")
+            shutil.rmtree(filtered_dir)
+        
         filtered_dir.mkdir(exist_ok=True)
 
         # Get conversations with keyword matches
@@ -643,102 +890,131 @@ class ContentAnalyzer:
         self.logger.info(f"Filtered summary saved to: {summary_file}")
 
     def split_large_html_files(
-        self, output_dir: str = "analysis_results", max_messages_per_file: int = 500
+        self, output_dir: str = "analysis_results", max_file_size_kb: int = 2000
     ) -> None:
-        """Split large HTML files into smaller chunks for better browser performance."""
+        """Split large HTML files into smaller chunks based on file size for better browser performance."""
         if not self.results or not self.source_directory:
             self.logger.warning(
                 "No results available or source directory not set for file splitting"
             )
             return
 
-        # Find large files that need splitting
-        large_files = [
-            result
-            for result in self.results
-            if result.keyword_matches and result.total_messages > max_messages_per_file
-        ]
+        # Find very large files that need splitting based on file size
+        # Only split files that are significantly larger than the target size
+        split_threshold_kb = max_file_size_kb * 2.5  # Only split files larger than 2.5x the target size
+        large_files = []
+        for result in self.results:
+            if result.keyword_matches:
+                source_file = Path(self.source_directory) / result.file_name
+                if source_file.exists():
+                    file_size_kb = source_file.stat().st_size / 1024
+                    if file_size_kb > split_threshold_kb:
+                        large_files.append((result, file_size_kb))
+                        self.logger.info(f"File {result.file_name} ({file_size_kb:.1f}KB) will be split")
 
         if not large_files:
             self.logger.info(
-                f"No large files found (>{max_messages_per_file} messages)"
+                f"No very large files found requiring splitting (>{split_threshold_kb:.0f}KB threshold)"
             )
             return
 
         # Create split files directory
         output_path = Path(output_dir)
         split_dir = output_path / "split_conversations"
+        
+        # Clear existing directory if it exists
+        if split_dir.exists():
+            self.logger.info(f"Clearing existing directory: {split_dir}")
+            shutil.rmtree(split_dir)
+        
         split_dir.mkdir(exist_ok=True)
 
         self.logger.info(f"Splitting {len(large_files)} large HTML files...")
 
-        for result in large_files:
+        for result, file_size_kb in large_files:
             source_file = Path(self.source_directory) / result.file_name
             if not source_file.exists():
                 continue
 
             try:
-                self._split_html_file(
-                    source_file, split_dir, max_messages_per_file, result
+                self._split_html_file_by_size(
+                    source_file, split_dir, max_file_size_kb, result, file_size_kb
                 )
             except Exception as e:
                 self.logger.error(f"Failed to split {result.file_name}: {e}")
 
         # Create index file for split conversations
-        self._create_split_index(split_dir, large_files, max_messages_per_file)
+        self._create_split_index_by_size(split_dir, large_files, max_file_size_kb)
 
         self.logger.info(f"Split files saved to: {split_dir}")
 
-    def _split_html_file(
+    def _split_html_file_by_size(
         self,
         source_file: Path,
         split_dir: Path,
-        max_messages: int,
+        max_file_size_kb: int,
         result: AnalysisResult,
+        original_size_kb: float,
     ) -> None:
-        """Split a single HTML file into smaller chunks."""
+        """Split a single HTML file into smaller chunks based on file size."""
         try:
             with open(source_file, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            # Parse HTML
-            if LXML_AVAILABLE:
-                tree = html.fromstring(content)
-
-                # Find message elements
-                message_elements = tree.xpath(
-                    '//div[contains(@class, "message")] | //p[contains(@class, "message")] | //div[contains(@class, "msg")] | //p[contains(@class, "msg")]'
+            # Calculate target size in bytes
+            max_size_bytes = max_file_size_kb * 1024
+            content_size = len(content.encode('utf-8'))
+            
+            # Estimate number of parts needed
+            estimated_parts = max(1, int(content_size / max_size_bytes) + 1)
+            
+            self.logger.info(f"Splitting {source_file.name} ({original_size_kb:.1f}KB) into ~{estimated_parts} parts")
+            
+            # Split by character chunks to approximate file size
+            chunk_size = len(content) // estimated_parts
+            base_name = source_file.stem
+            
+            # Extract HTML head for proper formatting
+            head_match = re.search(r'<head.*?</head>', content, re.DOTALL | re.IGNORECASE)
+            head_content = head_match.group(0) if head_match else '<head><meta charset="UTF-8"><title>WhatsApp Chat</title></head>'
+            
+            # Extract body content (remove head and html tags)
+            body_content = re.sub(r'<html.*?>', '', content, flags=re.IGNORECASE)
+            body_content = re.sub(r'</html>', '', body_content, flags=re.IGNORECASE)
+            body_content = re.sub(r'<head.*?</head>', '', body_content, flags=re.DOTALL | re.IGNORECASE)
+            body_content = body_content.strip()
+            
+            # Split content into chunks
+            for i in range(estimated_parts):
+                start_pos = i * chunk_size
+                end_pos = min((i + 1) * chunk_size, len(body_content))
+                
+                if start_pos >= len(body_content):
+                    break
+                    
+                chunk_content = body_content[start_pos:end_pos]
+                
+                # Try to break at a reasonable point (end of line or message)
+                if i < estimated_parts - 1:  # Not the last chunk
+                    # Look for a good breaking point in the last 200 characters
+                    search_back = min(200, len(chunk_content))
+                    better_break = chunk_content.rfind('</div>', -search_back)
+                    if better_break == -1:
+                        better_break = chunk_content.rfind('\n', -search_back)
+                    if better_break > len(chunk_content) - search_back:
+                        chunk_content = chunk_content[:better_break + 6 if '</div>' in chunk_content[better_break:better_break+6] else better_break + 1]
+                
+                # Create split file
+                split_filename = f"{base_name}_part{i+1:02d}.html"
+                split_file = split_dir / split_filename
+                
+                self._create_split_html_by_size(
+                    split_file, chunk_content, head_content, source_file, i+1, estimated_parts, result
                 )
-
-                if not message_elements:
-                    # Fallback: try to find messages by text patterns
-                    self._split_html_by_text_patterns(
-                        source_file, split_dir, max_messages, result
-                    )
-                    return
-
-                # Split messages into chunks
-                chunks = [
-                    message_elements[i : i + max_messages]
-                    for i in range(0, len(message_elements), max_messages)
-                ]
-
-                # Create split files
-                base_name = source_file.stem
-                for i, chunk in enumerate(chunks, 1):
-                    split_filename = f"{base_name}_part{i:02d}.html"
-                    split_file = split_dir / split_filename
-
-                    # Create new HTML with this chunk
-                    self._create_split_html(
-                        split_file, chunk, source_file, i, len(chunks), result
-                    )
-
-            else:
-                # Fallback to text-based splitting
-                self._split_html_by_text_patterns(
-                    source_file, split_dir, max_messages, result
-                )
+                
+                # Check actual file size
+                actual_size_kb = split_file.stat().st_size / 1024
+                self.logger.debug(f"Created {split_filename} ({actual_size_kb:.1f}KB)")
 
         except Exception as e:
             self.logger.error(f"Error splitting {source_file}: {e}")
@@ -826,6 +1102,48 @@ class ContentAnalyzer:
         with open(split_file, "w", encoding="utf-8") as f:
             f.write(html_content)
 
+    def _create_split_html_by_size(
+        self,
+        split_file: Path,
+        chunk_content: str,
+        head_content: str,
+        source_file: Path,
+        part_num: int,
+        total_parts: int,
+        result: AnalysisResult,
+    ) -> None:
+        """Create a split HTML file with proper structure based on file size."""
+        base_name = source_file.stem
+        file_size_kb = len(chunk_content.encode('utf-8')) / 1024
+        
+        html_content = f"""<!DOCTYPE html>
+<html>
+{head_content}
+<body>
+<div style="padding: 20px; font-family: Arial, sans-serif;">
+    <div style="background: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <h2>🗂️ Conversación: {base_name}</h2>
+        <p><strong>📄 Parte {part_num} de {total_parts}</strong> (~{file_size_kb:.1f}KB)</p>
+        <p><strong>📁 Archivo original:</strong> {result.file_name}</p>
+        <p><strong>🔍 Keywords encontradas:</strong> {', '.join(result.keyword_matches.keys())}</p>
+        <p><strong>📊 Total de coincidencias:</strong> {sum(result.keyword_matches.values())}</p>
+        <p style="font-size: 0.9em; color: #666;">💡 Tip: Usa Ctrl+F para buscar texto específico en esta parte</p>
+    </div>
+    <hr>
+    <div class="chat-content">
+{chunk_content}
+    </div>
+    <div style="margin-top: 30px; padding: 15px; background: #f9f9f9; border-radius: 5px; font-size: 0.9em;">
+        <p><strong>📝 Nota:</strong> Esta es la parte {part_num} de {total_parts} del archivo original dividido para mejor rendimiento del navegador.</p>
+        <p><strong>🔗 Navegación:</strong> Regresa al índice principal para ver todas las partes.</p>
+    </div>
+</div>
+</body>
+</html>"""
+
+        with open(split_file, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
     def _create_split_html(
         self,
         split_file: Path,
@@ -867,62 +1185,85 @@ class ContentAnalyzer:
         with open(split_file, "w", encoding="utf-8") as f:
             f.write(html_content)
 
-    def _create_split_index(
-        self, split_dir: Path, large_files: List[AnalysisResult], max_messages: int
+    def _create_split_index_by_size(
+        self, split_dir: Path, large_files: List[Tuple], max_file_size_kb: int
     ) -> None:
-        """Create an index file for all split conversations."""
+        """Create an index file for all split conversations based on file size."""
         index_file = split_dir / "index.html"
 
         html_content = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Índice de Conversaciones Divididas</title>
+    <title>📂 Índice de Conversaciones Divididas por Tamaño</title>
     <style>
-        body {{ font-family: Arial, sans-serif; margin: 20px; }}
-        .conversation {{ margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }}
-        .parts {{ margin-top: 10px; }}
-        .part-link {{ display: inline-block; margin: 2px; padding: 5px 10px; background: #e7f3ff; border-radius: 3px; text-decoration: none; }}
-        .part-link:hover {{ background: #cce7ff; }}
-        .stats {{ color: #666; font-size: 0.9em; }}
+        body {{ font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }}
+        .header {{ background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }}
+        .conversation {{ margin: 15px 0; padding: 15px; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
+        .parts {{ margin-top: 15px; }}
+        .part-link {{ display: inline-block; margin: 3px; padding: 8px 12px; background: #e7f3ff; border-radius: 5px; text-decoration: none; border: 1px solid #b3d9ff; transition: all 0.2s; }}
+        .part-link:hover {{ background: #cce7ff; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }}
+        .stats {{ color: #666; font-size: 0.9em; margin: 5px 0; }}
+        .size-info {{ background: #e8f5e8; padding: 8px; border-radius: 4px; margin: 10px 0; }}
+        .tips {{ background: #fff3cd; padding: 15px; border-radius: 5px; margin-top: 20px; border: 1px solid #ffeaa7; }}
     </style>
 </head>
 <body>
-    <h1>📂 Conversaciones Divididas</h1>
-    <p>Los siguientes archivos fueron divididos para mejorar el rendimiento del navegador:</p>
-    <p><strong>Criterio:</strong> Archivos con más de {max_messages} mensajes</p>
+    <div class="header">
+        <h1>📂 Conversaciones Divididas por Tamaño de Archivo</h1>
+        <p>Los siguientes archivos fueron divididos automáticamente para mejorar el rendimiento del navegador.</p>
+        <div class="size-info">
+            <p><strong>🎯 Criterio de división:</strong> Solo archivos MUY grandes (>{max_file_size_kb * 2.5:.0f}KB)</p>
+            <p><strong>📏 Tamaño objetivo por parte:</strong> ~{max_file_size_kb}KB</p>
+            <p><strong>💡 Nota:</strong> Archivos menores a {max_file_size_kb * 2.5:.0f}KB se mantienen intactos</p>
+        </div>
+    </div>
     
 """
 
-        for result in large_files:
+        for result, original_size_kb in large_files:
             base_name = Path(result.file_name).stem
-            estimated_parts = (result.total_messages // max_messages) + 1
+            
+            # Calculate estimated parts based on file size
+            max_size_bytes = max_file_size_kb * 1024
+            content_size_bytes = original_size_kb * 1024
+            estimated_parts = max(1, int(content_size_bytes / max_size_bytes) + 1)
 
             html_content += f"""
     <div class="conversation">
-        <h3>{base_name}</h3>
+        <h3>📄 {base_name}</h3>
         <div class="stats">
-            📊 {result.total_messages:,} mensajes | 🔍 {sum(result.keyword_matches.values())} coincidencias
-            <br>Keywords: {', '.join(result.keyword_matches.keys())}
+            📊 {result.total_messages:,} mensajes | 📁 {original_size_kb:.1f}KB | 🔍 {sum(result.keyword_matches.values())} coincidencias
+            <br><strong>Keywords:</strong> {', '.join(result.keyword_matches.keys())}
+            <br><strong>Dividido en:</strong> ~{estimated_parts} partes de {max_file_size_kb}KB cada una
         </div>
         <div class="parts">
-            <strong>Partes:</strong>
+            <strong>📂 Partes disponibles:</strong>
 """
 
-            # Add links to split files
-            for i in range(1, estimated_parts + 1):
+            # Add links to split files (check if they actually exist)
+            parts_found = 0
+            for i in range(1, estimated_parts + 2):  # Check a bit beyond estimate
                 part_filename = f"{base_name}_part{i:02d}.html"
-                html_content += f'            <a href="{part_filename}" class="part-link">Parte {i}</a>\n'
+                part_file = split_dir / part_filename
+                if part_file.exists():
+                    part_size_kb = part_file.stat().st_size / 1024
+                    html_content += f'            <a href="{part_filename}" class="part-link">Parte {i} ({part_size_kb:.0f}KB)</a>\n'
+                    parts_found += 1
+                elif parts_found > 0:  # Stop once we've found parts and hit a missing one
+                    break
 
             html_content += "        </div>\n    </div>\n"
 
         html_content += """
-    <div style="margin-top: 30px; padding: 15px; background: #f9f9f9; border-radius: 5px;">
-        <h4>💡 Consejos para archivos grandes:</h4>
+    <div class="tips">
+        <h4>💡 Consejos para navegar archivos divididos:</h4>
         <ul>
-            <li>Usa <strong>Ctrl+F</strong> para buscar texto específico en cada parte</li>
-            <li>Para búsquedas avanzadas, usa editores de texto como VSCode o Notepad++</li>
-            <li>Los archivos originales completos están en la carpeta principal</li>
+            <li><strong>🔍 Búsqueda rápida:</strong> Usa <strong>Ctrl+F</strong> para buscar texto específico en cada parte</li>
+            <li><strong>🔗 Navegación:</strong> Cada parte muestra qué keywords contiene en la cabecera</li>
+            <li><strong>⚡ Rendimiento:</strong> Los archivos ahora cargan más rápido en tu navegador</li>
+            <li><strong>📁 Archivos originales:</strong> Los archivos completos están en la carpeta principal</li>
+            <li><strong>🛠️ Búsquedas avanzadas:</strong> Para búsquedas complejas, usa editores como VSCode o Notepad++</li>
         </ul>
     </div>
 </body>
@@ -977,7 +1318,7 @@ Examples:
   python content_analyzer.py /path/to/exports --no-parallel
   python content_analyzer.py /path/to/exports --copy-filtered
   python content_analyzer.py /path/to/exports --copy-filtered --min-keywords 5
-  python content_analyzer.py /path/to/exports --split-large --max-messages-per-file 300
+  python content_analyzer.py /path/to/exports --split-large --max-file-size-kb 1500
   python content_analyzer.py /path/to/exports --copy-filtered --split-large
   python content_analyzer.py --create-config
         """,
@@ -1042,10 +1383,10 @@ Examples:
     )
 
     parser.add_argument(
-        "--max-messages-per-file",
+        "--max-file-size-kb",
         type=int,
-        default=500,
-        help="Maximum messages per file when splitting large files (default: 500)",
+        default=2000,
+        help="Maximum file size in KB when splitting large files (default: 2000KB)",
     )
 
     args = parser.parse_args()
@@ -1075,7 +1416,7 @@ Examples:
 
         # Split large files if requested
         if args.split_large:
-            analyzer.split_large_html_files(args.output, args.max_messages_per_file)
+            analyzer.split_large_html_files(args.output, args.max_file_size_kb)
 
         summary = analyzer.generate_summary_report()
 
@@ -1143,24 +1484,30 @@ Examples:
                 print(f"   • Criterio: mínimo {args.min_keywords} coincidencias")
                 print("   • Resumen: filtered_summary.txt")
 
-                # File size warnings for large files
+                # File size warnings for very large files
+                split_threshold_kb = args.max_file_size_kb * 2.5
                 large_files = []
                 for result in filtered_convs:
-                    if (
-                        result.total_messages > 1000
-                    ):  # Consider files with >1000 messages as large
-                        large_files.append((result.file_name, result.total_messages))
+                    source_file = Path(analyzer.source_directory) / result.file_name
+                    if source_file.exists():
+                        file_size_kb = source_file.stat().st_size / 1024
+                        if file_size_kb > split_threshold_kb:
+                            large_files.append((result.file_name, file_size_kb))
 
                 if large_files:
-                    print("\n⚠️  ARCHIVOS GRANDES DETECTADOS:")
-                    print(f"   • {len(large_files)} conversaciones con >1000 mensajes")
-                    print("   • Pueden tardar en cargar en el navegador")
+                    print("\n⚠️  ARCHIVOS MUY GRANDES DETECTADOS:")
+                    print(f"   • {len(large_files)} conversaciones con >{split_threshold_kb:.0f}KB")
+                    for name, size_kb in large_files[:3]:  # Show first 3
+                        print(f"     - {name}: {size_kb:.1f}KB")
+                    if len(large_files) > 3:
+                        print(f"     - ... y {len(large_files) - 3} más")
+                    print("   • Estos archivos pueden congelar el navegador")
                     if not args.split_large:
                         print(
-                            "   • Recomendación: usar --split-large para dividir archivos"
+                            f"   • RECOMENDACIÓN: usar --split-large para dividir archivos (>{split_threshold_kb:.0f}KB)"
                         )
                     else:
-                        print("   • Archivos divididos en: split_conversations/")
+                        print("   • Archivos divididos automáticamente en: split_conversations/")
             else:
                 print("\n🔍 FILTRADO:")
                 print(f"   • Sin coincidencias suficientes (mín. {args.min_keywords})")
