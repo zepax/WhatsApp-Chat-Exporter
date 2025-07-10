@@ -3,7 +3,7 @@ import subprocess
 import tempfile
 import unittest
 
-from brazilian_number_processing import process_phone_number, process_vcard
+from phone_number_processing import process_phone_number, process_vcard
 
 
 class TestVCardProcessor(unittest.TestCase):
@@ -51,6 +51,13 @@ class TestVCardProcessor(unittest.TestCase):
             ("+1 650-253-0000", "+1 650-253-0000", None),
             ("+44 20 7031 3000", "+44 20 7031 3000", None),
             ("+1 650-253-0000 ext123", "+1 650-253-0000 ext. 123", None),
+            # Mexican numbers
+            ("+52 662 340 2020", "+52 662 340 2020", None),
+            ("52 662 340 2020", "+52 662 340 2020", None),
+            # Spanish numbers
+            ("+34 91 123 45 67", "+34 91 123 45 67", None),
+            # Colombian numbers
+            ("+57 1 234 5678", "+57 1 234 5678", None),
         ]
 
         # Edge cases
@@ -186,6 +193,46 @@ TEL;TYPE=CELL:2712345678
 END:VCARD
 """
 
+        # Test case 7: International numbers (Mexican, Spanish, Colombian)
+        vcard7 = """BEGIN:VCARD
+VERSION:3.0
+N:Garcia;Juan;;;
+FN:Juan Garcia
+TEL:+52 662 340 2020
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+N:Rodriguez;Maria;;;
+FN:Maria Rodriguez
+TEL:+34 91 123 45 67
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+N:Lopez;Carlos;;;
+FN:Carlos Lopez
+TEL:+57 1 234 5678
+END:VCARD
+"""
+        expected7 = """BEGIN:VCARD
+VERSION:3.0
+N:Garcia;Juan;;;
+FN:Juan Garcia
+TEL;TYPE=CELL:+52 662 340 2020
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+N:Rodriguez;Maria;;;
+FN:Maria Rodriguez
+TEL;TYPE=CELL:+34 91 123 45 67
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+N:Lopez;Carlos;;;
+FN:Carlos Lopez
+TEL;TYPE=CELL:+57 1 234 5678
+END:VCARD
+"""
+
         # Test case 6: VCARD with no phone numbers
         vcard6 = """BEGIN:VCARD
 VERSION:3.0
@@ -209,6 +256,7 @@ END:VCARD
             (vcard4, expected4),
             (vcard5, expected5),
             (vcard6, expected6),
+            (vcard7, expected7),
         ]
 
         for i, (input_vcard, expected_output) in enumerate(test_cases):
@@ -261,7 +309,7 @@ END:VCARD
 
         try:
             script_path = os.path.join(
-                os.path.dirname(__file__), "brazilian_number_processing.py"
+                os.path.dirname(__file__), "phone_number_processing.py"
             )
             test_args = [
                 "python" if os.name == "nt" else "python3",
@@ -269,7 +317,7 @@ END:VCARD
                 input_path,
                 output_path,
                 "--region",
-                "BR",
+                "MX",
             ]
             # We're just testing that the argument parsing works
             subprocess.call(

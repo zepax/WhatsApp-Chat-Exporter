@@ -19,7 +19,9 @@
       "Bash(ruff check:*)",
       "Bash(git checkout:*)",
       "Bash(pip install:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(apt list:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

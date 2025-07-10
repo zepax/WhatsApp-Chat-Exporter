@@ -1,11 +1,10 @@
 """
-Utility functions to normalise and format telephone numbers found in VCARD
-files.  Originally tailored for Brazilian numbers, the implementation now relies
-on the :mod:`phonenumbers` package so it works for phone numbers from any
-country.  For Brazilian mobile numbers an additional entry is added without the
-extra ninth digit.
+Utility functions to normalize and format telephone numbers found in VCARD
+files. Uses the :mod:`phonenumbers` package to work with phone numbers from any
+country. For Brazilian mobile numbers an additional entry is added without the
+extra ninth digit for legacy compatibility.
 
-Contributed by @magpires
+Originally contributed by @magpires
 """
 
 import argparse
@@ -17,7 +16,7 @@ from phonenumbers import PhoneNumber, PhoneNumberFormat
 
 
 def process_phone_number(
-    raw_phone: str, default_region: str = "BR"
+    raw_phone: str, default_region: str = None
 ) -> Tuple[Optional[str], Optional[str]]:
     """Return international phone number formats.
 
@@ -43,6 +42,7 @@ def process_phone_number(
 
     modified_formatted: Optional[str] = None
 
+    # Brazilian-specific formatting and legacy support
     if phonenumbers.region_code_for_number(parsed) == "BR":
         digits = phonenumbers.national_significant_number(parsed)
         area = digits[:2]
@@ -61,7 +61,7 @@ def process_phone_number(
 
 
 def process_vcard(
-    input_vcard: str, output_vcard: str, default_region: str = "BR"
+    input_vcard: str, output_vcard: str, default_region: str = None
 ) -> None:
     """
     Process a VCARD file to standardize telephone entries and add a second TEL line
@@ -101,15 +101,16 @@ def process_vcard(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=(
-            "Process a VCARD file to standardise telephone entries. For Brazilian "
-            "mobile numbers an extra TEL line without the ninth digit is added."
+            "Process a VCARD file to standardize telephone entries for international "
+            "format. For Brazilian mobile numbers an extra TEL line without the ninth "
+            "digit is added for legacy compatibility."
         )
     )
     parser.add_argument("input_vcard", type=str, help="Input VCARD file")
     parser.add_argument("output_vcard", type=str, help="Output VCARD file")
     parser.add_argument(
         "--region",
-        default="BR",
+        default=None,
         help="Default region for numbers without country code (ISO 3166-1 alpha-2)",
     )
     args = parser.parse_args()
