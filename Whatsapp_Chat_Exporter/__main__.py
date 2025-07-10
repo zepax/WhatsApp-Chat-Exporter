@@ -39,10 +39,21 @@ from Whatsapp_Chat_Exporter.utility import (
     sanitize_filename,
 )
 
+from .logging_config import (
+    get_logger,
+    get_security_logger,
+    log_operation,
+    log_performance,
+    setup_logging,
+)
+
+# Import security and logging utilities
+from .security_utils import PathTraversalError, SecurePathValidator
+
 logger = logging.getLogger(__name__)
 
 
-def setup_logging(verbose: bool = False) -> None:
+def setup_basic_logging(verbose: bool = False) -> None:
     """Configure basic logging."""
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
@@ -1098,21 +1109,37 @@ def process_exported_chat(args, data: ChatCollection) -> None:
         )
 
 
+@log_performance
 def run(args, parser) -> None:
     """Execute the export process with parsed arguments."""
+    logger = get_logger(__name__)
+    security_logger = get_security_logger()
     temp_dirs: List[str] = []
 
-    auto_detect_backup(args, temp_dirs)
+    with log_operation("whatsapp_export", output_dir=args.output):
+        logger.info("Starting WhatsApp Chat Export process")
 
-    # Check for updates
-    if args.check_update:
-        sys.exit(check_update(allow_network=True))
+        auto_detect_backup(args, temp_dirs)
 
-    # Validate arguments
-    validate_args(parser, args)
+        # Check for updates
+        if args.check_update:
+            logger.info("Checking for updates")
+            sys.exit(check_update(allow_network=True))
 
-    # Create output directory if it doesn't exist
-    os.makedirs(args.output, exist_ok=True)
+        # Validate arguments
+        logger.debug("Validating arguments")
+        validate_args(parser, args)
+
+        # Create output directory with security validation
+        try:
+            output_path = SecurePathValidator.validate_path(args.output)
+            output_path.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Output directory created/validated: {output_path}")
+        except (PathTraversalError, ValueError) as e:
+            security_logger.error(
+                f"Invalid output path detected: {args.output}", extra={"error": str(e)}
+            )
+            raise
 
     # Initialize data collection
     data = ChatCollection()
@@ -1218,5 +1245,16 @@ def main() -> None:
     """Entry point for console scripts."""
     parser = setup_argument_parser()
     args = parser.parse_args()
-    setup_logging(args.verbose)
-    run(args, parser)
+
+    # Set up comprehensive logging
+    log_level = "DEBUG" if args.verbose else "INFO"
+    setup_logging(log_level=log_level)
+
+    logger = get_logger(__name__)
+    logger.info("WhatsApp Chat Exporter starting")
+
+    try:
+        run(args, parser)
+    except Exception as e:
+        logger.error(f"Application failed with error: {e}", exc_info=True)
+        raise
