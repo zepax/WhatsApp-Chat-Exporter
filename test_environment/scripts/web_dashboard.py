@@ -3,57 +3,61 @@ Web Dashboard for WhatsApp Chat Analyzer
 Provides interactive visualization and real-time analysis results
 """
 
-from flask import Flask, render_template, jsonify, request, send_file
-import json
-from pathlib import Path
 import threading
 import webbrowser
-from datetime import datetime
+from pathlib import Path
+
 import plotly.graph_objs as go
 import plotly.utils
+from flask import Flask, jsonify, render_template
+
 
 def create_web_dashboard(analyzer_instance):
     """Create and configure Flask web dashboard."""
     app = Flask(__name__)
-    app.secret_key = 'whatsapp_analyzer_secret_key_2024'
-    
-    @app.route('/')
+    app.secret_key = "whatsapp_analyzer_secret_key_2024"
+
+    @app.route("/")
     def dashboard_home():
         """Main dashboard page."""
-        return render_template('dashboard.html')
-    
-    @app.route('/api/analysis_summary')
+        return render_template("dashboard.html")
+
+    @app.route("/api/analysis_summary")
     def get_analysis_summary():
         """API endpoint for analysis summary."""
         try:
             summary = analyzer_instance.generate_summary_report()
             return jsonify(summary)
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
-    
-    @app.route('/api/file_details/<file_name>')
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/file_details/<file_name>")
     def get_file_details(file_name):
         """API endpoint for detailed file analysis."""
         try:
             for result in analyzer_instance.results:
-                if hasattr(result, 'file_name') and result.file_name == file_name:
-                    return jsonify({
-                        'file_name': result.file_name,
-                        'total_messages': result.total_messages,
-                        'total_words': result.total_words,
-                        'keyword_matches': result.keyword_matches,
-                        'sentiment_score': getattr(result, 'sentiment_score', None),
-                        'language_detected': getattr(result, 'language_detected', None),
-                        'participants': getattr(result, 'participants', []),
-                        'topics_detected': getattr(result, 'topics_detected', []),
-                        'processing_time': getattr(result, 'processing_time', 0),
-                        'file_size_kb': getattr(result, 'file_size_kb', 0)
-                    })
-            return jsonify({'error': 'File not found'}), 404
+                if hasattr(result, "file_name") and result.file_name == file_name:
+                    return jsonify(
+                        {
+                            "file_name": result.file_name,
+                            "total_messages": result.total_messages,
+                            "total_words": result.total_words,
+                            "keyword_matches": result.keyword_matches,
+                            "sentiment_score": getattr(result, "sentiment_score", None),
+                            "language_detected": getattr(
+                                result, "language_detected", None
+                            ),
+                            "participants": getattr(result, "participants", []),
+                            "topics_detected": getattr(result, "topics_detected", []),
+                            "processing_time": getattr(result, "processing_time", 0),
+                            "file_size_kb": getattr(result, "file_size_kb", 0),
+                        }
+                    )
+            return jsonify({"error": "File not found"}), 404
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
-    
-    @app.route('/api/charts/keywords')
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/charts/keywords")
     def get_keywords_chart():
         """Generate keywords frequency chart."""
         try:
@@ -62,82 +66,107 @@ def create_web_dashboard(analyzer_instance):
             for result in analyzer_instance.results:
                 for keyword, count in result.keyword_matches.items():
                     all_keywords[keyword] = all_keywords.get(keyword, 0) + count
-            
+
             # Create chart
             if all_keywords:
                 keywords = list(all_keywords.keys())[:10]  # Top 10
                 counts = [all_keywords[k] for k in keywords]
-                
-                fig = go.Figure(data=[
-                    go.Bar(x=keywords, y=counts, name='Keyword Frequency')
-                ])
-                fig.update_layout(
-                    title='Top Keywords Frequency',
-                    xaxis_title='Keywords',
-                    yaxis_title='Frequency'
+
+                fig = go.Figure(
+                    data=[go.Bar(x=keywords, y=counts, name="Keyword Frequency")]
                 )
-                
+                fig.update_layout(
+                    title="Top Keywords Frequency",
+                    xaxis_title="Keywords",
+                    yaxis_title="Frequency",
+                )
+
                 return jsonify(plotly.utils.PlotlyJSONEncoder().encode(fig))
             else:
-                return jsonify({'error': 'No keyword data available'})
-                
+                return jsonify({"error": "No keyword data available"})
+
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
-    
-    @app.route('/api/charts/sentiment')
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/charts/sentiment")
     def get_sentiment_chart():
         """Generate sentiment analysis chart."""
         try:
             sentiments = []
             files = []
-            
+
             for result in analyzer_instance.results:
-                if hasattr(result, 'sentiment_score') and result.sentiment_score is not None:
+                if (
+                    hasattr(result, "sentiment_score")
+                    and result.sentiment_score is not None
+                ):
                     sentiments.append(result.sentiment_score)
-                    files.append(result.file_name[:20] + '...' if len(result.file_name) > 20 else result.file_name)
-            
+                    files.append(
+                        result.file_name[:20] + "..."
+                        if len(result.file_name) > 20
+                        else result.file_name
+                    )
+
             if sentiments:
-                fig = go.Figure(data=[
-                    go.Scatter(x=files, y=sentiments, mode='markers+lines', name='Sentiment Score')
-                ])
-                fig.update_layout(
-                    title='Sentiment Analysis by Conversation',
-                    xaxis_title='Conversations',
-                    yaxis_title='Sentiment Score (-1 to 1)',
-                    yaxis=dict(range=[-1, 1])
+                fig = go.Figure(
+                    data=[
+                        go.Scatter(
+                            x=files,
+                            y=sentiments,
+                            mode="markers+lines",
+                            name="Sentiment Score",
+                        )
+                    ]
                 )
-                
+                fig.update_layout(
+                    title="Sentiment Analysis by Conversation",
+                    xaxis_title="Conversations",
+                    yaxis_title="Sentiment Score (-1 to 1)",
+                    yaxis=dict(range=[-1, 1]),
+                )
+
                 return jsonify(plotly.utils.PlotlyJSONEncoder().encode(fig))
             else:
-                return jsonify({'error': 'No sentiment data available'})
-                
+                return jsonify({"error": "No sentiment data available"})
+
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
-    
-    @app.route('/api/progress')
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/progress")
     def get_progress():
         """Get current analysis progress."""
         try:
-            if hasattr(analyzer_instance, 'current_file_count') and hasattr(analyzer_instance, 'total_file_count'):
+            if hasattr(analyzer_instance, "current_file_count") and hasattr(
+                analyzer_instance, "total_file_count"
+            ):
                 progress = {
-                    'current': analyzer_instance.current_file_count,
-                    'total': analyzer_instance.total_file_count,
-                    'percentage': (analyzer_instance.current_file_count / analyzer_instance.total_file_count * 100) if analyzer_instance.total_file_count > 0 else 0
+                    "current": analyzer_instance.current_file_count,
+                    "total": analyzer_instance.total_file_count,
+                    "percentage": (
+                        (
+                            analyzer_instance.current_file_count
+                            / analyzer_instance.total_file_count
+                            * 100
+                        )
+                        if analyzer_instance.total_file_count > 0
+                        else 0
+                    ),
                 }
                 return jsonify(progress)
             else:
-                return jsonify({'current': 0, 'total': 0, 'percentage': 0})
+                return jsonify({"current": 0, "total": 0, "percentage": 0})
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
-    
+            return jsonify({"error": str(e)}), 500
+
     return app
+
 
 def create_dashboard_template():
     """Create HTML template for dashboard."""
     template_dir = Path("templates")
     template_dir.mkdir(exist_ok=True)
-    
-    dashboard_html = '''<!DOCTYPE html>
+
+    dashboard_html = """<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -361,38 +390,39 @@ def create_dashboard_template():
         });
     </script>
 </body>
-</html>'''
+</html>"""
 
     template_file = template_dir / "dashboard.html"
-    with open(template_file, 'w', encoding='utf-8') as f:
+    with open(template_file, "w", encoding="utf-8") as f:
         f.write(dashboard_html)
-    
+
     return template_file
+
 
 def start_dashboard_server(analyzer_instance, port=5000, auto_open=True):
     """Start the web dashboard server."""
     try:
         # Create template
         create_dashboard_template()
-        
+
         # Create Flask app
         app = create_web_dashboard(analyzer_instance)
-        
+
         # Start server in separate thread
         def run_server():
-            app.run(host='127.0.0.1', port=port, debug=False, use_reloader=False)
-        
+            app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
+
         server_thread = threading.Thread(target=run_server, daemon=True)
         server_thread.start()
-        
+
         # Open browser
         if auto_open:
             dashboard_url = f"http://127.0.0.1:{port}"
             threading.Timer(1.0, lambda: webbrowser.open(dashboard_url)).start()
             print(f"🚀 Dashboard iniciado en: {dashboard_url}")
-        
+
         return server_thread
-        
+
     except Exception as e:
         print(f"Error starting dashboard: {e}")
         return None

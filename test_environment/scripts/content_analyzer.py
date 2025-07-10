@@ -13,19 +13,17 @@ import multiprocessing
 import os
 import re
 import shutil
-import sqlite3
+import signal
+import sys
 import time
-import hashlib
+import traceback
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Any
-import traceback
-import signal
-import sys
+from datetime import datetime
 from functools import wraps
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 try:
     from bs4 import BeautifulSoup
@@ -49,6 +47,7 @@ if not BS4_AVAILABLE and not LXML_AVAILABLE:
 
 try:
     import pandas as pd
+
     PANDAS_AVAILABLE = True
 except ImportError:
     PANDAS_AVAILABLE = False
@@ -56,14 +55,16 @@ except ImportError:
 # Advanced dependencies
 try:
     import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment
     from openpyxl.chart import BarChart, Reference
+    from openpyxl.styles import Alignment, Font, PatternFill
+
     EXCEL_ADVANCED = True
 except ImportError:
     EXCEL_ADVANCED = False
 
 try:
     from textblob import TextBlob
+
     SENTIMENT_AVAILABLE = True
 except ImportError:
     SENTIMENT_AVAILABLE = False
@@ -71,28 +72,32 @@ except ImportError:
 try:
     import matplotlib.pyplot as plt
     import seaborn as sns
+
     PLOTTING_AVAILABLE = True
 except ImportError:
     PLOTTING_AVAILABLE = False
 
 try:
-    from reportlab.lib.pagesizes import letter, A4
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.pagesizes import A4, letter
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import inch
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table
+
     PDF_AVAILABLE = True
 except ImportError:
     PDF_AVAILABLE = False
 
 try:
     import flask
-    from flask import Flask, render_template, jsonify, request
+    from flask import Flask, jsonify, render_template, request
+
     WEB_DASHBOARD = True
 except ImportError:
     WEB_DASHBOARD = False
 
 try:
     import schedule
+
     SCHEDULING_AVAILABLE = True
 except ImportError:
     SCHEDULING_AVAILABLE = False
@@ -101,6 +106,7 @@ except ImportError:
 # Advanced error handling decorators
 def retry_on_failure(max_retries: int = 3, delay: float = 1.0):
     """Decorator to retry functions on failure with exponential backoff."""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -111,17 +117,25 @@ def retry_on_failure(max_retries: int = 3, delay: float = 1.0):
                 except Exception as e:
                     last_exception = e
                     if attempt < max_retries - 1:
-                        wait_time = delay * (2 ** attempt)
+                        wait_time = delay * (2**attempt)
                         time.sleep(wait_time)
-                        logging.warning(f"Attempt {attempt + 1} failed for {func.__name__}: {e}. Retrying in {wait_time}s...")
+                        logging.warning(
+                            f"Attempt {attempt + 1} failed for {func.__name__}: {e}. Retrying in {wait_time}s..."
+                        )
                     else:
-                        logging.error(f"All {max_retries} attempts failed for {func.__name__}: {e}")
+                        logging.error(
+                            f"All {max_retries} attempts failed for {func.__name__}: {e}"
+                        )
             raise last_exception
+
         return wrapper
+
     return decorator
+
 
 def handle_errors(default_return=None, log_level=logging.ERROR):
     """Decorator to handle errors gracefully and return default value."""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -131,13 +145,16 @@ def handle_errors(default_return=None, log_level=logging.ERROR):
                 logging.log(log_level, f"Error in {func.__name__}: {e}")
                 logging.debug(f"Traceback: {traceback.format_exc()}")
                 return default_return
+
         return wrapper
+
     return decorator
+
 
 @dataclass
 class AdvancedAnalysisResult:
     """Enhanced data class with more detailed analysis results."""
-    
+
     file_name: str
     file_path: str
     file_size_kb: float
@@ -170,10 +187,11 @@ class AdvancedAnalysisResult:
         if self.errors is None:
             self.errors = []
 
+
 @dataclass
 class AnalysisConfig:
     """Configuration class for analysis settings."""
-    
+
     # Search settings
     keywords: List[str]
     use_regex: bool = False
@@ -182,31 +200,32 @@ class AnalysisConfig:
     date_from: Optional[str] = None
     date_to: Optional[str] = None
     participants_filter: List[str] = None
-    
+
     # Processing settings
     max_workers: int = None
     use_cache: bool = True
     cache_directory: str = ".cache"
-    
+
     # Analysis features
     sentiment_analysis: bool = False
     language_detection: bool = False
     topic_extraction: bool = False
-    
+
     # Security settings
     anonymize_data: bool = False
     encrypt_output: bool = False
-    
+
     # Output settings
     generate_excel: bool = False
     generate_pdf: bool = False
     generate_dashboard: bool = False
-    
+
     def __post_init__(self):
         if self.max_workers is None:
             self.max_workers = multiprocessing.cpu_count()
         if self.participants_filter is None:
             self.participants_filter = []
+
 
 # Legacy compatibility
 @dataclass
@@ -230,45 +249,45 @@ class AdvancedContentAnalyzer:
     """Next-generation professional content analyzer for WhatsApp chat exports."""
 
     def __init__(
-        self, 
-        config_file: Optional[str] = None, 
+        self,
+        config_file: Optional[str] = None,
         config: Optional[AnalysisConfig] = None,
-        cache_enabled: bool = True
+        cache_enabled: bool = True,
     ):
         """Initialize the advanced analyzer with comprehensive configuration."""
         self.setup_advanced_logging()
-        
+
         # Core data storage
         self.results: List[AdvancedAnalysisResult] = []
         self.legacy_results: List[AnalysisResult] = []  # Backward compatibility
-        
+
         # Configuration
         self.config = config or self._load_configuration(config_file)
-        
+
         # Pattern compilation
         self.keyword_patterns: Dict[str, re.Pattern] = {}
         self.combined_pattern: Optional[re.Pattern] = None
         self.regex_patterns: Dict[str, re.Pattern] = {}
-        
+
         # Processing state
         self.source_directory: Optional[str] = None
         self.current_file_count = 0
         self.total_file_count = 0
         self.start_time = None
-        
+
         # Cache system
         self.cache_enabled = cache_enabled and self.config.use_cache
         self.cache_db_path = Path(self.config.cache_directory) / "analysis_cache.db"
         self._init_cache_system()
-        
+
         # Advanced features
         self._init_sentiment_analyzer()
         self._init_topic_extractor()
-        
+
         # Signal handling for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
-        
+
         self._compile_patterns()
 
     def _signal_handler(self, signum, frame):
@@ -279,32 +298,33 @@ class AdvancedContentAnalyzer:
 
     def _cleanup(self):
         """Clean up resources."""
-        if hasattr(self, 'cache_connection') and self.cache_connection:
+        if hasattr(self, "cache_connection") and self.cache_connection:
             self.cache_connection.close()
+
 
 class ContentAnalyzer(AdvancedContentAnalyzer):
     """Backward-compatible wrapper for the advanced analyzer."""
-    
+
     def __init__(
         self, config_file: Optional[str] = None, max_workers: Optional[int] = None
     ):
         """Initialize with legacy interface."""
         # Create legacy config
         if config_file:
-            with open(config_file, 'r', encoding='utf-8') as f:
+            with open(config_file, "r", encoding="utf-8") as f:
                 config_data = json.load(f)
-                keywords = config_data.get('keywords', [])
+                keywords = config_data.get("keywords", [])
         else:
             keywords = self._get_default_keywords()
-            
+
         config = AnalysisConfig(
             keywords=keywords,
             max_workers=max_workers or multiprocessing.cpu_count(),
-            use_cache=True
+            use_cache=True,
         )
-        
+
         super().__init__(config=config)
-        
+
         # Legacy compatibility attributes
         self.keywords_list = self.config.keywords
         self.max_workers = self.config.max_workers
@@ -313,13 +333,33 @@ class ContentAnalyzer(AdvancedContentAnalyzer):
         """Return default keywords for general content analysis."""
         return [
             # Emotional indicators
-            "happy", "sad", "angry", "excited", "frustrated", "love", "hate",
+            "happy",
+            "sad",
+            "angry",
+            "excited",
+            "frustrated",
+            "love",
+            "hate",
             # Communication patterns
-            "meeting", "call", "video", "photo", "document", "location",
+            "meeting",
+            "call",
+            "video",
+            "photo",
+            "document",
+            "location",
             # Time indicators
-            "today", "tomorrow", "yesterday", "morning", "afternoon", "evening",
+            "today",
+            "tomorrow",
+            "yesterday",
+            "morning",
+            "afternoon",
+            "evening",
             # Common actions
-            "sent", "received", "deleted", "forwarded", "replied",
+            "sent",
+            "received",
+            "deleted",
+            "forwarded",
+            "replied",
         ]
 
     def setup_logging(self):
@@ -769,12 +809,12 @@ class ContentAnalyzer(AdvancedContentAnalyzer):
         # Create filtered conversations directory
         output_path = Path(output_dir)
         filtered_dir = output_path / "filtered_conversations"
-        
+
         # Clear existing directory if it exists
         if filtered_dir.exists():
             self.logger.info(f"Clearing existing directory: {filtered_dir}")
             shutil.rmtree(filtered_dir)
-        
+
         filtered_dir.mkdir(exist_ok=True)
 
         # Get conversations with keyword matches
@@ -901,7 +941,9 @@ class ContentAnalyzer(AdvancedContentAnalyzer):
 
         # Find very large files that need splitting based on file size
         # Only split files that are significantly larger than the target size
-        split_threshold_kb = max_file_size_kb * 2.5  # Only split files larger than 2.5x the target size
+        split_threshold_kb = (
+            max_file_size_kb * 2.5
+        )  # Only split files larger than 2.5x the target size
         large_files = []
         for result in self.results:
             if result.keyword_matches:
@@ -910,7 +952,9 @@ class ContentAnalyzer(AdvancedContentAnalyzer):
                     file_size_kb = source_file.stat().st_size / 1024
                     if file_size_kb > split_threshold_kb:
                         large_files.append((result, file_size_kb))
-                        self.logger.info(f"File {result.file_name} ({file_size_kb:.1f}KB) will be split")
+                        self.logger.info(
+                            f"File {result.file_name} ({file_size_kb:.1f}KB) will be split"
+                        )
 
         if not large_files:
             self.logger.info(
@@ -921,12 +965,12 @@ class ContentAnalyzer(AdvancedContentAnalyzer):
         # Create split files directory
         output_path = Path(output_dir)
         split_dir = output_path / "split_conversations"
-        
+
         # Clear existing directory if it exists
         if split_dir.exists():
             self.logger.info(f"Clearing existing directory: {split_dir}")
             shutil.rmtree(split_dir)
-        
+
         split_dir.mkdir(exist_ok=True)
 
         self.logger.info(f"Splitting {len(large_files)} large HTML files...")
@@ -963,55 +1007,78 @@ class ContentAnalyzer(AdvancedContentAnalyzer):
 
             # Calculate target size in bytes
             max_size_bytes = max_file_size_kb * 1024
-            content_size = len(content.encode('utf-8'))
-            
+            content_size = len(content.encode("utf-8"))
+
             # Estimate number of parts needed
             estimated_parts = max(1, int(content_size / max_size_bytes) + 1)
-            
-            self.logger.info(f"Splitting {source_file.name} ({original_size_kb:.1f}KB) into ~{estimated_parts} parts")
-            
+
+            self.logger.info(
+                f"Splitting {source_file.name} ({original_size_kb:.1f}KB) into ~{estimated_parts} parts"
+            )
+
             # Split by character chunks to approximate file size
             chunk_size = len(content) // estimated_parts
             base_name = source_file.stem
-            
+
             # Extract HTML head for proper formatting
-            head_match = re.search(r'<head.*?</head>', content, re.DOTALL | re.IGNORECASE)
-            head_content = head_match.group(0) if head_match else '<head><meta charset="UTF-8"><title>WhatsApp Chat</title></head>'
-            
+            head_match = re.search(
+                r"<head.*?</head>", content, re.DOTALL | re.IGNORECASE
+            )
+            head_content = (
+                head_match.group(0)
+                if head_match
+                else '<head><meta charset="UTF-8"><title>WhatsApp Chat</title></head>'
+            )
+
             # Extract body content (remove head and html tags)
-            body_content = re.sub(r'<html.*?>', '', content, flags=re.IGNORECASE)
-            body_content = re.sub(r'</html>', '', body_content, flags=re.IGNORECASE)
-            body_content = re.sub(r'<head.*?</head>', '', body_content, flags=re.DOTALL | re.IGNORECASE)
+            body_content = re.sub(r"<html.*?>", "", content, flags=re.IGNORECASE)
+            body_content = re.sub(r"</html>", "", body_content, flags=re.IGNORECASE)
+            body_content = re.sub(
+                r"<head.*?</head>", "", body_content, flags=re.DOTALL | re.IGNORECASE
+            )
             body_content = body_content.strip()
-            
+
             # Split content into chunks
             for i in range(estimated_parts):
                 start_pos = i * chunk_size
                 end_pos = min((i + 1) * chunk_size, len(body_content))
-                
+
                 if start_pos >= len(body_content):
                     break
-                    
+
                 chunk_content = body_content[start_pos:end_pos]
-                
+
                 # Try to break at a reasonable point (end of line or message)
                 if i < estimated_parts - 1:  # Not the last chunk
                     # Look for a good breaking point in the last 200 characters
                     search_back = min(200, len(chunk_content))
-                    better_break = chunk_content.rfind('</div>', -search_back)
+                    better_break = chunk_content.rfind("</div>", -search_back)
                     if better_break == -1:
-                        better_break = chunk_content.rfind('\n', -search_back)
+                        better_break = chunk_content.rfind("\n", -search_back)
                     if better_break > len(chunk_content) - search_back:
-                        chunk_content = chunk_content[:better_break + 6 if '</div>' in chunk_content[better_break:better_break+6] else better_break + 1]
-                
+                        chunk_content = chunk_content[
+                            : (
+                                better_break + 6
+                                if "</div>"
+                                in chunk_content[better_break : better_break + 6]
+                                else better_break + 1
+                            )
+                        ]
+
                 # Create split file
                 split_filename = f"{base_name}_part{i+1:02d}.html"
                 split_file = split_dir / split_filename
-                
+
                 self._create_split_html_by_size(
-                    split_file, chunk_content, head_content, source_file, i+1, estimated_parts, result
+                    split_file,
+                    chunk_content,
+                    head_content,
+                    source_file,
+                    i + 1,
+                    estimated_parts,
+                    result,
                 )
-                
+
                 # Check actual file size
                 actual_size_kb = split_file.stat().st_size / 1024
                 self.logger.debug(f"Created {split_filename} ({actual_size_kb:.1f}KB)")
@@ -1114,8 +1181,8 @@ class ContentAnalyzer(AdvancedContentAnalyzer):
     ) -> None:
         """Create a split HTML file with proper structure based on file size."""
         base_name = source_file.stem
-        file_size_kb = len(chunk_content.encode('utf-8')) / 1024
-        
+        file_size_kb = len(chunk_content.encode("utf-8")) / 1024
+
         html_content = f"""<!DOCTYPE html>
 <html>
 {head_content}
@@ -1223,7 +1290,7 @@ class ContentAnalyzer(AdvancedContentAnalyzer):
 
         for result, original_size_kb in large_files:
             base_name = Path(result.file_name).stem
-            
+
             # Calculate estimated parts based on file size
             max_size_bytes = max_file_size_kb * 1024
             content_size_bytes = original_size_kb * 1024
@@ -1250,7 +1317,9 @@ class ContentAnalyzer(AdvancedContentAnalyzer):
                     part_size_kb = part_file.stat().st_size / 1024
                     html_content += f'            <a href="{part_filename}" class="part-link">Parte {i} ({part_size_kb:.0f}KB)</a>\n'
                     parts_found += 1
-                elif parts_found > 0:  # Stop once we've found parts and hit a missing one
+                elif (
+                    parts_found > 0
+                ):  # Stop once we've found parts and hit a missing one
                     break
 
             html_content += "        </div>\n    </div>\n"
@@ -1496,7 +1565,9 @@ Examples:
 
                 if large_files:
                     print("\n⚠️  ARCHIVOS MUY GRANDES DETECTADOS:")
-                    print(f"   • {len(large_files)} conversaciones con >{split_threshold_kb:.0f}KB")
+                    print(
+                        f"   • {len(large_files)} conversaciones con >{split_threshold_kb:.0f}KB"
+                    )
                     for name, size_kb in large_files[:3]:  # Show first 3
                         print(f"     - {name}: {size_kb:.1f}KB")
                     if len(large_files) > 3:
@@ -1507,7 +1578,9 @@ Examples:
                             f"   • RECOMENDACIÓN: usar --split-large para dividir archivos (>{split_threshold_kb:.0f}KB)"
                         )
                     else:
-                        print("   • Archivos divididos automáticamente en: split_conversations/")
+                        print(
+                            "   • Archivos divididos automáticamente en: split_conversations/"
+                        )
             else:
                 print("\n🔍 FILTRADO:")
                 print(f"   • Sin coincidencias suficientes (mín. {args.min_keywords})")
