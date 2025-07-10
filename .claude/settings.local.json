@@ -21,7 +21,8 @@
       "Bash(pip install:*)",
       "Bash(ls:*)",
       "Bash(apt list:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(poetry run python:*)"
     ],
     "deny": []
   }

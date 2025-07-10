@@ -26,12 +26,6 @@ from Whatsapp_Chat_Exporter import (
     ios_handler,
     ios_media_handler,
 )
-from .optimized_handlers import (
-    get_optimized_handler,
-    cleanup_optimizations,
-    OptimizedAndroidHandler,
-    OptimizedIOSHandler
-)
 from Whatsapp_Chat_Exporter.data_model import ChatCollection, ChatStore
 from Whatsapp_Chat_Exporter.utility import (
     APPLE_TIME,
@@ -52,6 +46,7 @@ from .logging_config import (
     log_performance,
     setup_logging,
 )
+from .optimized_handlers import cleanup_optimizations, get_optimized_handler
 
 # Import security and logging utilities
 from .security_utils import PathTraversalError, SecurePathValidator
@@ -792,18 +787,23 @@ def process_contacts(args, data: ChatCollection, contact_store=None) -> None:
 
     if os.path.isfile(contact_db):
         # Use optimized handlers for better performance
-        platform = "android" if args.android else "ios" 
+        platform = "android" if args.android else "ios"
         optimized_handler = get_optimized_handler(platform)
-        
+
         # Set up database optimizations
         optimized_handler.setup_optimizations(contact_db)
-        
-        filter_chat = getattr(args, 'filter_chat_include', []), getattr(args, 'filter_chat_exclude', [])
-        
+
+        filter_chat = (
+            getattr(args, "filter_chat_include", []),
+            getattr(args, "filter_chat_exclude", []),
+        )
+
         if args.android:
             optimized_handler.contacts(contact_db, data, args.timezone_offset)
         else:
-            optimized_handler.contacts(contact_db, data, args.timezone_offset, filter_chat)
+            optimized_handler.contacts(
+                contact_db, data, args.timezone_offset, filter_chat
+            )
 
 
 def process_messages(args, data: ChatCollection) -> None:
@@ -823,14 +823,14 @@ def process_messages(args, data: ChatCollection) -> None:
         sys.exit(6)
 
     filter_chat = (args.filter_chat_include, args.filter_chat_exclude)
-    
+
     # Use optimized handlers for better performance
     platform = "android" if args.android else "ios"
     optimized_handler = get_optimized_handler(platform)
-    
+
     # Set up database optimizations
     optimized_handler.setup_optimizations(msg_db)
-    
+
     logger.info(f"Processing messages with optimized {platform} handler")
 
     # Process messages with optimized handler
@@ -1251,10 +1251,10 @@ def run(args, parser) -> None:
 
     logger.info("Everything is done!")
     report_resource_usage("Final")
-    
+
     # Clean up optimization resources
     cleanup_optimizations()
-    
+
     for tmp in temp_dirs:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -1266,7 +1266,7 @@ def main() -> None:
 
     # Set up comprehensive logging
     log_level = "DEBUG" if args.verbose else "INFO"
-    setup_logging(log_level=log_level)
+    setup_logging(log_level=log_level, verbose=args.verbose)
 
     logger = get_logger(__name__)
     logger.info("WhatsApp Chat Exporter starting")

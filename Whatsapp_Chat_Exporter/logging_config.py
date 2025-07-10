@@ -97,16 +97,23 @@ class StructuredFormatter(logging.Formatter):
 class WhatsAppLoggerConfig:
     """Centralized logging configuration for WhatsApp Chat Exporter."""
 
-    def __init__(self, log_dir: Optional[Path] = None, log_level: str = "INFO"):
+    def __init__(
+        self,
+        log_dir: Optional[Path] = None,
+        log_level: str = "INFO",
+        verbose: bool = False,
+    ):
         """
         Initialize logging configuration.
 
         Args:
             log_dir: Directory for log files (default: ./logs)
             log_level: Default logging level
+            verbose: Enable verbose console output
         """
         self.log_dir = log_dir or Path("logs")
         self.log_level = getattr(logging, log_level.upper(), logging.INFO)
+        self.verbose = verbose
         self.loggers: Dict[str, logging.Logger] = {}
 
         # Ensure log directory exists
@@ -125,9 +132,13 @@ class WhatsAppLoggerConfig:
 
         # Console handler with colored output
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
+        # Set console level based on verbose flag
+        console_level = logging.DEBUG if self.verbose else logging.INFO
+        console_handler.setLevel(console_level)
         console_formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            "%(levelname)s: %(message)s"
+            if not self.verbose
+            else "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         console_handler.setFormatter(console_formatter)
         console_handler.addFilter(SecurityFilter())
@@ -230,7 +241,7 @@ _logger_config: Optional[WhatsAppLoggerConfig] = None
 
 
 def setup_logging(
-    log_dir: Optional[Path] = None, log_level: str = "INFO"
+    log_dir: Optional[Path] = None, log_level: str = "INFO", verbose: bool = False
 ) -> WhatsAppLoggerConfig:
     """
     Set up global logging configuration.
@@ -238,12 +249,13 @@ def setup_logging(
     Args:
         log_dir: Directory for log files
         log_level: Default logging level
+        verbose: Enable verbose console output
 
     Returns:
         Logger configuration instance
     """
     global _logger_config
-    _logger_config = WhatsAppLoggerConfig(log_dir, log_level)
+    _logger_config = WhatsAppLoggerConfig(log_dir, log_level, verbose)
     _logger_config.log_startup_info()
     return _logger_config
 
