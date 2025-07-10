@@ -4,17 +4,18 @@ This file contains the advanced methods that will be integrated into the main an
 """
 
 import hashlib
+import html
 import json
 import logging
+import re
 import sqlite3
 import time
+from dataclasses import asdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-import re
-import html
-from dataclasses import asdict
-from typing import Dict, List, Tuple, Optional
+
 from bs4 import BeautifulSoup
+
 
 def setup_advanced_logging(self):
     """Set up advanced logging with multiple levels and outputs."""
