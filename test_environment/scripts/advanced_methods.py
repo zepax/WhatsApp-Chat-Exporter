@@ -2,7 +2,13 @@
 Advanced methods for the ContentAnalyzer
 This file contains the advanced methods that will be integrated into the main analyzer.
 """
-
+import json
+import time
+import hashlib
+import logging
+import sqlite3
+from pathlib import Path
+from typing import Optional, Dict, List, Tuple
 
 def setup_advanced_logging(self):
     """Set up advanced logging with multiple levels and outputs."""
