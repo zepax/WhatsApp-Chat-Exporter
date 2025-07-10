@@ -26,6 +26,12 @@ from Whatsapp_Chat_Exporter import (
     ios_handler,
     ios_media_handler,
 )
+from .optimized_handlers import (
+    get_optimized_handler,
+    cleanup_optimizations,
+    OptimizedAndroidHandler,
+    OptimizedIOSHandler
+)
 from Whatsapp_Chat_Exporter.data_model import ChatCollection, ChatStore
 from Whatsapp_Chat_Exporter.utility import (
     APPLE_TIME,
@@ -785,12 +791,19 @@ def process_contacts(args, data: ChatCollection, contact_store=None) -> None:
     )
 
     if os.path.isfile(contact_db):
-        with sqlite3.connect(contact_db) as db:
-            db.row_factory = sqlite3.Row
-            if args.android:
-                android_handler.contacts(db, data, args.enrich_from_vcards)
-            else:
-                ios_handler.contacts(db, data)
+        # Use optimized handlers for better performance
+        platform = "android" if args.android else "ios" 
+        optimized_handler = get_optimized_handler(platform)
+        
+        # Set up database optimizations
+        optimized_handler.setup_optimizations(contact_db)
+        
+        filter_chat = getattr(args, 'filter_chat_include', []), getattr(args, 'filter_chat_exclude', [])
+        
+        if args.android:
+            optimized_handler.contacts(contact_db, data, args.timezone_offset)
+        else:
+            optimized_handler.contacts(contact_db, data, args.timezone_offset, filter_chat)
 
 
 def process_messages(args, data: ChatCollection) -> None:
@@ -810,44 +823,45 @@ def process_messages(args, data: ChatCollection) -> None:
         sys.exit(6)
 
     filter_chat = (args.filter_chat_include, args.filter_chat_exclude)
+    
+    # Use optimized handlers for better performance
+    platform = "android" if args.android else "ios"
+    optimized_handler = get_optimized_handler(platform)
+    
+    # Set up database optimizations
+    optimized_handler.setup_optimizations(msg_db)
+    
+    logger.info(f"Processing messages with optimized {platform} handler")
 
-    with sqlite3.connect(msg_db) as db:
-        db.row_factory = sqlite3.Row
+    # Process messages with optimized handler
+    optimized_handler.messages(
+        msg_db,
+        data,
+        args.media,
+        args.timezone_offset,
+        args.filter_date,
+        filter_chat,
+        args.filter_empty,
+    )
 
-        # Process messages
-        if args.android:
-            message_handler = android_handler
-        else:
-            message_handler = ios_handler
+    # Process media with optimizations
+    optimized_handler.media(
+        msg_db,
+        data,
+        args.media,
+        args.filter_date,
+        filter_chat,
+        args.filter_empty,
+        args.separate_media,
+    )
 
-        message_handler.messages(
-            db,
-            data,
-            args.media,
-            args.timezone_offset,
-            args.filter_date,
-            filter_chat,
-            args.filter_empty,
-        )
+    # Process vcards with optimizations
+    optimized_handler.vcard(
+        msg_db, data, args.media, args.filter_date, filter_chat, args.filter_empty
+    )
 
-        # Process media
-        message_handler.media(
-            db,
-            data,
-            args.media,
-            args.filter_date,
-            filter_chat,
-            args.filter_empty,
-            args.separate_media,
-        )
-
-        # Process vcards
-        message_handler.vcard(
-            db, data, args.media, args.filter_date, filter_chat, args.filter_empty
-        )
-
-        # Process calls
-        process_calls(args, db, data, filter_chat)
+    # Process calls with optimizations
+    optimized_handler.calls(msg_db, data, args.timezone_offset, filter_chat)
 
 
 def process_calls(args, db, data: ChatCollection, filter_chat) -> None:
@@ -1237,6 +1251,10 @@ def run(args, parser) -> None:
 
     logger.info("Everything is done!")
     report_resource_usage("Final")
+    
+    # Clean up optimization resources
+    cleanup_optimizations()
+    
     for tmp in temp_dirs:
         shutil.rmtree(tmp, ignore_errors=True)
 
