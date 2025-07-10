@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Moreno;Elias Industria Real;;;
+FN:Elias Industria Real Moreno
+ORG:Industria Real;
+TEL;type=CELL;type=VOICE;waid=5213338093002:+52 33 3809 3002
+item1.TEL:+52 33 3796 5274
+item1.X-ABLabel:Casa
+END:VCARD

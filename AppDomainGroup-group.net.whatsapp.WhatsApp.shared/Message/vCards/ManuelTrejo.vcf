@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Trejo;Manuel;;;
+FN:Manuel Trejo
+BDAY;value=date:1992-05-19
+TEL;type=CELL;type=VOICE;waid=5216622241670:+52 662 224 1670
+EMAIL;type=INTERNET:manueltrejomontijo@outlook.com
+EMAIL;type=INTERNET:manu_squid@hotmail.com
+item2.ADR;type=HOME:;;;hillo!suncity;;;Mexico
+END:VCARD

@@ -1,0 +1,7 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Suministros;Juan Carlos;Gerente;;
+FN:Juan Carlos Gerente Suministros
+item1.TEL;waid=5215540191641:+52 55 4019 1641
+item1.X-ABLabel:Móvil
+END:VCARD

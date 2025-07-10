@@ -1,0 +1,71 @@
+{
+  "keywords": [
+    "call",
+    "video",
+    "meeting",
+    "message",
+    "llamada",
+    "mensaje",
+    "juntada",
+    "happy",
+    "sad",
+    "excited",
+    "love",
+    "angry",
+    "work",
+    "party",
+    "travel",
+    "shopping",
+    "celebration",
+    "family",
+    "friend",
+    "colleague",
+    "novio",
+    "novia",
+    "jale",
+    "photo",
+    "document",
+    "location",
+    "video"
+  ],
+  "description": "Professional content analysis keywords for WhatsApp chat analysis",
+  "categories": {
+    "communication": [
+      "call",
+      "video",
+      "meeting",
+      "message",
+      "llamada",
+      "mensaje",
+      "juntada"
+    ],
+    "emotions": [
+      "happy",
+      "sad",
+      "excited",
+      "love",
+      "angry"
+    ],
+    "activities": [
+      "work",
+      "party",
+      "travel",
+      "shopping",
+      "celebration"
+    ],
+    "relationships": [
+      "family",
+      "friend",
+      "colleague",
+      "novio",
+      "novia",
+      "jale"
+    ],
+    "media": [
+      "photo",
+      "document",
+      "location",
+      "video"
+    ]
+  }
+}

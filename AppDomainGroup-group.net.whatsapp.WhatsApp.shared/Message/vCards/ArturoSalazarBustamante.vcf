@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Bustamante;Arturo;Salazar;;
+FN:Arturo Salazar Bustamante
+item1.TEL;waid=5216621381413:+52 662 138 1413
+item1.X-ABLabel:Mobile
+item2.EMAIL;type=INTERNET:arturito_9_@hotmail.com
+item2.X-ABLabel:INTERNET
+END:VCARD

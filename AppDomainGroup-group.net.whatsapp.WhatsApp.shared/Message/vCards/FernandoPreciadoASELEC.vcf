@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+N:ASELEC;Fernando;Preciado;;
+FN:Fernando Preciado ASELEC
+item1.TEL;waid=5216624750435:+52 662 475 0435
+item1.X-ABLabel:Móvil
+item2.EMAIL;type=INTERNET:fernando.preciado@aselec.com
+item2.X-ABLabel:Casa
+END:VCARD

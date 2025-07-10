@@ -1,0 +1,193 @@
+{
+  "summary": {
+    "analysis_timestamp": "2025-07-09T10:11:38.016431",
+    "total_files_analyzed": 10,
+    "total_messages": 36,
+    "total_words": 26506,
+    "files_with_keyword_matches": 10,
+    "top_keywords": {
+      "no": 194,
+      "si": 111,
+      "casa": 41,
+      "bien": 26,
+      "gracias": 25,
+      "ok": 10,
+      "work": 10,
+      "bueno": 10,
+      "yes": 8,
+      "hola": 7
+    },
+    "average_messages_per_file": 3.6,
+    "average_words_per_file": 2650.6
+  },
+  "detailed_results": [
+    {
+      "file_name": "120363026430640869-Proyecto SIEMENS .html",
+      "total_messages": 0,
+      "total_words": 554,
+      "keyword_matches": {
+        "gracias": 4,
+        "hola": 3,
+        "si": 3,
+        "no": 3,
+        "ok": 5,
+        "bien": 2,
+        "work": 1
+      },
+      "sentiment_score": null,
+      "language_detected": null,
+      "timestamp": "2025-07-09T10:11:36.930743"
+    },
+    {
+      "file_name": "120363028641216530-Campamento de las chicas.html",
+      "total_messages": 0,
+      "total_words": 1003,
+      "keyword_matches": {
+        "gracias": 2,
+        "hola": 2,
+        "si": 9,
+        "no": 25,
+        "bueno": 1,
+        "bien": 1,
+        "casa": 5,
+        "work": 1,
+        "trabajo": 1
+      },
+      "sentiment_score": null,
+      "language_detected": null,
+      "timestamp": "2025-07-09T10:11:36.950532"
+    },
+    {
+      "file_name": "120363029625325257-Posboda almita.html",
+      "total_messages": 3,
+      "total_words": 5259,
+      "keyword_matches": {
+        "gracias": 10,
+        "si": 52,
+        "yes": 3,
+        "no": 63,
+        "bueno": 6,
+        "bien": 12,
+        "mal": 1,
+        "foto": 1,
+        "casa": 4,
+        "work": 1,
+        "trabajo": 4
+      },
+      "sentiment_score": null,
+      "language_detected": null,
+      "timestamp": "2025-07-09T10:11:37.160516"
+    },
+    {
+      "file_name": "120363027433745146-Fiesta sorpresa andrea.html",
+      "total_messages": 3,
+      "total_words": 2531,
+      "keyword_matches": {
+        "gracias": 1,
+        "hola": 2,
+        "si": 17,
+        "yes": 2,
+        "no": 25,
+        "ok": 2,
+        "bien": 2,
+        "casa": 19,
+        "work": 1
+      },
+      "sentiment_score": null,
+      "language_detected": null,
+      "timestamp": "2025-07-09T10:11:37.245639"
+    },
+    {
+      "file_name": "120363022851594979-Alamos SS .html",
+      "total_messages": 7,
+      "total_words": 3375,
+      "keyword_matches": {
+        "gracias": 1,
+        "thank": 1,
+        "si": 19,
+        "yes": 1,
+        "no": 30,
+        "ok": 2,
+        "bien": 5,
+        "mal": 1,
+        "casa": 6,
+        "work": 1
+      },
+      "sentiment_score": null,
+      "language_detected": null,
+      "timestamp": "2025-07-09T10:11:37.407275"
+    },
+    {
+      "file_name": "0-WhatsApp.html",
+      "total_messages": 0,
+      "total_words": 245,
+      "keyword_matches": {
+        "work": 1
+      },
+      "sentiment_score": null,
+      "language_detected": null,
+      "timestamp": "2025-07-09T10:11:37.416639"
+    },
+    {
+      "file_name": "120363025233343933-A ver sus outfits.html",
+      "total_messages": 1,
+      "total_words": 504,
+      "keyword_matches": {
+        "si": 2,
+        "no": 11,
+        "bien": 2,
+        "work": 1
+      },
+      "sentiment_score": null,
+      "language_detected": null,
+      "timestamp": "2025-07-09T10:11:37.455515"
+    },
+    {
+      "file_name": "120363028070656236-FOTOS ACTIVIDADES DIARIAS.html",
+      "total_messages": 14,
+      "total_words": 10194,
+      "keyword_matches": {
+        "gracias": 4,
+        "si": 5,
+        "yes": 1,
+        "no": 25,
+        "bueno": 2,
+        "ok": 1,
+        "foto": 1,
+        "work": 1
+      },
+      "sentiment_score": null,
+      "language_detected": null,
+      "timestamp": "2025-07-09T10:11:37.898494"
+    },
+    {
+      "file_name": "120363022335028984-Shein.html",
+      "total_messages": 5,
+      "total_words": 202,
+      "keyword_matches": {
+        "yes": 1,
+        "bueno": 1,
+        "work": 1
+      },
+      "sentiment_score": null,
+      "language_detected": null,
+      "timestamp": "2025-07-09T10:11:37.906980"
+    },
+    {
+      "file_name": "120363027655024543-Carnita asada SIEMENS.html",
+      "total_messages": 3,
+      "total_words": 2639,
+      "keyword_matches": {
+        "gracias": 3,
+        "si": 4,
+        "no": 12,
+        "bien": 2,
+        "casa": 7,
+        "work": 1
+      },
+      "sentiment_score": null,
+      "language_detected": null,
+      "timestamp": "2025-07-09T10:11:38.016125"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Baynori;GCI;Virginia;;
+FN:GCI Virginia Baynori
+item1.TEL;waid=5216629489123:+52 662 948 9123
+item1.X-ABLabel:Móvil
+TEL;type=HOME;waid=5216629489123:+52 662 948 9123
+EMAIL;type=INTERNET:jadministrativo@grupocomercialindustrial.com
+EMAIL;type=INTERNET;type=HOME:jadministrativo@grupocomercialindustrial.com
+END:VCARD

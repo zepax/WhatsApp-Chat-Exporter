@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Hernandez;Oscar;;;
+FN:Oscar Hernandez
+ORG:Hitachi Energy;
+TITLE:Project Manager
+TEL;type=CELL;type=VOICE;waid=5215545006748:+52 55 4500 6748
+EMAIL;type=INTERNET;type=HOME:oscarc.hernandez@hitachienergy.com
+END:VCARD

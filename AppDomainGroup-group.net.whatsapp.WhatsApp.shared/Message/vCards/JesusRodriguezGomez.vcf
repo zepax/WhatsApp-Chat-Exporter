@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Gomez;Jesus;Rodriguez;;
+FN:Jesus Rodriguez Gomez
+ORG:Delta Transmisión
+TITLE:
+item1.TEL;waid=5213322574507:+52 33 2257 4507
+item1.X-ABLabel:Casa
+item2.TEL:+52 33 3811 7784
+item2.X-ABLabel:Trabajo
+END:VCARD

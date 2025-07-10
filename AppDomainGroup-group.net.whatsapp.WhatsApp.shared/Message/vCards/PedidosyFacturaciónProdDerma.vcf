@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Prod Derma;Pedidos y Facturación;;;
+FN:Pedidos y Facturación Prod Derma
+X-WA-BIZ-NAME:Pedidos y Facturación
+X-WA-BIZ-DESCRIPTION:Aquí puedes solicitarnos tus productos para envio a domicilio. Asi como tu factura. 😌
+ORG:Pedidos y Facturación;
+TEL;type=CELL;type=VOICE;waid=5215561555647:+52 55 6155 5647
+END:VCARD

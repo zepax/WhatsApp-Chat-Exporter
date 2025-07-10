@@ -4,7 +4,22 @@
       "Bash(rg:*)",
       "Bash(python -m pytest Whatsapp_Chat_Exporter/test_message.py::test_fetch_row_safely_success -v)",
       "Bash(find:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(grep:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)",
+      "Bash(./scripts/test_ios_basic.sh:*)",
+      "Bash(sed:*)",
+      "Bash(poetry install:*)",
+      "Bash(rm:*)",
+      "Bash(sqlite3:*)",
+      "Bash(ruff check:*)",
+      "Bash(git checkout:*)",
+      "Bash(pip install:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }

@@ -1,0 +1,7 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Rivera;Pedro;;;
+FN:Pedro Rivera
+item1.TEL;waid=5212741116062:+52 274 111 6062
+item1.X-ABLabel:Celular
+END:VCARD

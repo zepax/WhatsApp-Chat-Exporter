@@ -1,0 +1,130 @@
+# Comandos para Pruebas iOS - WhatsApp Chat Exporter
+
+## Descripción
+Estos comandos permiten probar el exportador de chats de WhatsApp con archivos iOS ubicados en la carpeta test_environment/ios/
+
+## Archivos de Prueba iOS Disponibles
+- test_environment/ios/backup/ChatStorage.sqlite (Base de datos principal de mensajes)
+- test_environment/ios/backup/7c7fba66680ef796b916b067077cc246adacf01d.txt (Archivo de texto asociado)
+- test_environment/ios/media/ (Carpeta para archivos multimedia)
+
+## Comandos de Prueba
+
+### 1. Prueba Básica iOS (Solo HTML)
+```bash
+# Comando básico para exportar chats iOS a HTML
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_test_basic/
+
+# Alternativa con backup completo
+python -m Whatsapp_Chat_Exporter -i -b test_environment/ios/backup/ -o test_environment/output/ios_test_backup/
+```
+
+### 2. Prueba iOS con JSON
+```bash
+# Exportar solo a JSON
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -j test_environment/output/ios_test.json --no-html
+
+# Exportar a HTML y JSON
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_test_complete/ -j test_environment/output/ios_test_complete.json
+```
+
+### 3. Prueba iOS con Filtros
+```bash
+# Filtrar por fecha (ejemplo: desde 2024)
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_filtered_date/ --filter-date ">= 2024-01-01"
+
+# Filtrar por chats específicos (incluir)
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_filtered_include/ --filter-include "Alexia,Fernanda,Karla"
+
+# Filtrar por chats específicos (excluir)
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_filtered_exclude/ --filter-exclude "spam,bot"
+```
+
+### 4. Prueba iOS con Opciones de Formato
+```bash
+# Exportar con tamaño máximo de archivo
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_paginated/ --max-size 1MB
+
+# Exportar sin avatares
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_no_avatars/ --no-avatar
+
+# Exportar con template personalizado
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_custom_template/ --template custom_template.html
+```
+
+### 5. Prueba iOS con Medios
+```bash
+# Exportar incluyendo archivos multimedia
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_with_media/ --media test_environment/ios/media/
+
+# Exportar con medios separados por chat
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_separated_media/ --media test_environment/ios/media/ --separate-media
+```
+
+### 6. Prueba iOS con Opciones Avanzadas
+```bash
+# Exportar con CSS offline
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_offline/ --offline-static static/
+
+# Exportar con headline personalizado
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_custom_headline/ --headline "Chats de WhatsApp de ??"
+
+# Exportar con zona horaria específica
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_timezone/ --timezone-offset -7
+```
+
+### 7. Prueba iOS con Validación
+```bash
+# Verificar la base de datos antes de exportar
+sqlite3 test_environment/ios/backup/ChatStorage.sqlite ".tables"
+
+# Contar mensajes en la base de datos
+sqlite3 test_environment/ios/backup/ChatStorage.sqlite "SELECT COUNT(*) FROM ZWAMESSAGE;"
+
+# Ver algunos chats disponibles
+sqlite3 test_environment/ios/backup/ChatStorage.sqlite "SELECT ZCONTACTJID, COUNT(*) as message_count FROM ZWAMESSAGE JOIN ZWACHATSESSION ON ZWAMESSAGE.ZCHATSESSION = ZWACHATSESSION.Z_PK GROUP BY ZCONTACTJID LIMIT 10;"
+```
+
+### 8. Prueba iOS con Diferentes Outputs
+```bash
+# Exportar solo texto plano
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite --txt test_environment/output/ios_txt/
+
+# Exportar con verbose para debugging
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_verbose/ -v
+
+# Exportar con estadísticas
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_stats/ --stats
+```
+
+### 9. Comando Rápido de Prueba (Recomendado)
+```bash
+# Prueba rápida y completa
+python -m Whatsapp_Chat_Exporter -i -d test_environment/ios/backup/ChatStorage.sqlite -o test_environment/output/ios_quick_test/ -v
+```
+
+### 10. Verificación Post-Exportación
+```bash
+# Verificar archivos generados
+ls -la test_environment/output/ios_quick_test/
+
+# Contar archivos HTML generados
+find test_environment/output/ios_quick_test/ -name "*.html" | wc -l
+
+# Ver el tamaño total de la exportación
+du -sh test_environment/output/ios_quick_test/
+```
+
+## Notas Importantes
+- Usar `-d` para especificar la base de datos directamente
+- Usar `-b` para el directorio completo de backup
+- Usar `-v` para output verbose y debugging
+- Crear carpetas de output si no existen
+- Los archivos .txt:Zone.Identifier son metadatos de Windows y se pueden ignorar
+
+## Solución de Problemas
+Si hay errores, verificar:
+1. Que la base de datos SQLite no esté corrupta
+2. Que se tengan permisos de lectura en los archivos
+3. Que la carpeta de output exista o se pueda crear
+4. Usar `-v` para más detalles del error

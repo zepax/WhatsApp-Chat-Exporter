@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Mendoza;Luis Angel;;;
+FN:Luis Angel Mendoza
+ORG:Aselec;
+TEL;type=CELL;type=VOICE;waid=5216623158459:+52 662 315 8459
+EMAIL;type=INTERNET:luis.mendoza@aselec.com
+END:VCARD

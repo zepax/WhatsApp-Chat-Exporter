@@ -17,7 +17,6 @@ from typing import Dict, List, Optional
 
 import aiofiles
 import psutil
-import rich
 from rich.progress import track
 
 from Whatsapp_Chat_Exporter import (
