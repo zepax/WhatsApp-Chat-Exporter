@@ -40,7 +40,9 @@
       "mcp__git__git_log",
       "mcp__filesystem__list_directory",
       "mcp__git__git_diff_unstaged",
-      "mcp__git__git_add"
+      "mcp__git__git_add",
+      "mcp__git__git_commit",
+      "Bash(git pull:*)"
     ],
     "deny": []
   }
