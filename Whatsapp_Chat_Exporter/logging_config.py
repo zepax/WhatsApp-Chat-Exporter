@@ -64,31 +64,35 @@ class StructuredFormatter(logging.Formatter):
         if record.exc_info:
             log_entry["exception"] = self.formatException(record.exc_info)
 
-        # Add extra fields
+        # Add extra fields (avoid overwriting existing keys)
         for key, value in record.__dict__.items():
-            if key not in [
-                "name",
-                "msg",
-                "args",
-                "levelname",
-                "levelno",
-                "pathname",
-                "filename",
-                "module",
-                "exc_info",
-                "exc_text",
-                "stack_info",
-                "lineno",
-                "funcName",
-                "created",
-                "msecs",
-                "relativeCreated",
-                "thread",
-                "threadName",
-                "processName",
-                "process",
-                "getMessage",
-            ]:
+            if (
+                key
+                not in [
+                    "name",
+                    "msg",
+                    "args",
+                    "levelname",
+                    "levelno",
+                    "pathname",
+                    "filename",
+                    "module",
+                    "exc_info",
+                    "exc_text",
+                    "stack_info",
+                    "lineno",
+                    "funcName",
+                    "created",
+                    "msecs",
+                    "relativeCreated",
+                    "thread",
+                    "threadName",
+                    "processName",
+                    "process",
+                    "getMessage",
+                ]
+                and key not in log_entry
+            ):
                 log_entry[key] = value
 
         return json.dumps(log_entry, default=str)
@@ -311,7 +315,7 @@ def log_performance(func):
                 f"Function {func.__name__} completed successfully",
                 extra={
                     "function": func.__name__,
-                    "module": func.__module__,
+                    "source_module": func.__module__,
                     "duration_seconds": duration,
                     "status": "success",
                 },
@@ -324,7 +328,7 @@ def log_performance(func):
                 f"Function {func.__name__} failed",
                 extra={
                     "function": func.__name__,
-                    "module": func.__module__,
+                    "source_module": func.__module__,
                     "duration_seconds": duration,
                     "status": "error",
                     "error_type": type(e).__name__,

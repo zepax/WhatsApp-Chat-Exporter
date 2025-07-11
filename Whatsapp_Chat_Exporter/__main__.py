@@ -86,6 +86,52 @@ def report_resource_usage(stage: str) -> None:
     )
 
 
+def _detect_platform_from_data(data: ChatCollection) -> str:
+    """Detect the platform based on the data structure and content."""
+    if not data:
+        return "unknown"
+
+    # Sample a few chats to detect platform characteristics
+    sample_chats = list(data.values())[:5]  # Check first 5 chats
+
+    ios_indicators = 0
+    android_indicators = 0
+
+    for chat in sample_chats:
+        # Check device type if available
+        if hasattr(chat, "device") and chat.device:
+            if chat.device.lower() == "ios":
+                ios_indicators += 10
+            elif chat.device.lower() == "android":
+                android_indicators += 10
+
+        # Check for iOS-specific attributes
+        if hasattr(chat, "media_base") and chat.media_base:
+            if "Message/" in chat.media_base or "AppDomain" in chat.media_base:
+                ios_indicators += 2
+            elif "WhatsApp/" in chat.media_base:
+                android_indicators += 2
+
+        # Check message structure for platform-specific patterns
+        sample_messages = list(chat.values())[:3]  # Check first 3 messages per chat
+        for message in sample_messages:
+            # iOS messages tend to have different timestamp patterns
+            if hasattr(message, "timestamp") and message.timestamp:
+                # iOS uses APPLE_TIME offset (978307200), Android doesn't
+                if message.timestamp > 978307200 and message.timestamp < 2000000000:
+                    ios_indicators += 1
+                elif message.timestamp > 1000000000 and message.timestamp < 9999999999:
+                    android_indicators += 1
+
+    # Return the platform with higher confidence
+    if ios_indicators > android_indicators:
+        return "ios"
+    elif android_indicators > ios_indicators:
+        return "android"
+    else:
+        return "unknown"
+
+
 def setup_argument_parser() -> ArgumentParser:
     """Set up and return the argument parser with all options."""
     try:
@@ -925,17 +971,38 @@ def create_output_files(args, data: ChatCollection, contact_store=None) -> None:
         if contact_store and not contact_store.is_empty():
             contact_store.enrich_from_vcards(data)
 
-        android_handler.create_html(
-            data,
-            args.output,
-            args.template,
-            args.embedded,
-            args.offline,
-            args.size,
-            args.no_avatar,
-            args.whatsapp_theme,
-            args.headline,
-        )
+        # Detect platform and use appropriate HTML generator
+        platform_detected = _detect_platform_from_data(data)
+
+        if platform_detected == "ios" and hasattr(ios_handler, "create_html"):
+            logger.info("Using iOS-optimized HTML generation")
+            ios_handler.create_html(
+                data,
+                args.output,
+                args.template,
+                args.embedded,
+                args.offline,
+                args.size,
+                args.no_avatar,
+                args.whatsapp_theme,
+                args.headline,
+            )
+        else:
+            # Use Android handler for Android, exported, or fallback
+            logger.info(
+                f"Using Android-compatible HTML generation for platform: {platform_detected}"
+            )
+            android_handler.create_html(
+                data,
+                args.output,
+                args.template,
+                args.embedded,
+                args.offline,
+                args.size,
+                args.no_avatar,
+                args.whatsapp_theme,
+                args.headline,
+            )
 
     # Create text files if requested
     if args.text_format:
@@ -1110,17 +1177,38 @@ def process_exported_chat(args, data: ChatCollection) -> None:
     copy_exported_media(args.exported, data, args.output)
 
     if not args.no_html:
-        android_handler.create_html(
-            data,
-            args.output,
-            args.template,
-            args.embedded,
-            args.offline,
-            args.size,
-            args.no_avatar,
-            args.whatsapp_theme,
-            args.headline,
-        )
+        # Detect platform and use appropriate HTML generator
+        platform_detected = _detect_platform_from_data(data)
+
+        if platform_detected == "ios" and hasattr(ios_handler, "create_html"):
+            logger.info("Using iOS-optimized HTML generation for exported chat")
+            ios_handler.create_html(
+                data,
+                args.output,
+                args.template,
+                args.embedded,
+                args.offline,
+                args.size,
+                args.no_avatar,
+                args.whatsapp_theme,
+                args.headline,
+            )
+        else:
+            # Use Android handler for Android, exported, or fallback
+            logger.info(
+                f"Using Android-compatible HTML generation for exported chat (platform: {platform_detected})"
+            )
+            android_handler.create_html(
+                data,
+                args.output,
+                args.template,
+                args.embedded,
+                args.offline,
+                args.size,
+                args.no_avatar,
+                args.whatsapp_theme,
+                args.headline,
+            )
 
 
 @log_performance
@@ -1164,17 +1252,39 @@ def run(args, parser) -> None:
     if args.import_json:
         # Import from JSON
         import_from_json(args.json, data)
-        android_handler.create_html(
-            data,
-            args.output,
-            args.template,
-            args.embedded,
-            args.offline,
-            args.size,
-            args.no_avatar,
-            args.whatsapp_theme,
-            args.headline,
-        )
+
+        # Detect platform and use appropriate HTML generator
+        platform_detected = _detect_platform_from_data(data)
+
+        if platform_detected == "ios" and hasattr(ios_handler, "create_html"):
+            logger.info("Using iOS-optimized HTML generation for JSON import")
+            ios_handler.create_html(
+                data,
+                args.output,
+                args.template,
+                args.embedded,
+                args.offline,
+                args.size,
+                args.no_avatar,
+                args.whatsapp_theme,
+                args.headline,
+            )
+        else:
+            # Use Android handler for Android, exported, or fallback
+            logger.info(
+                f"Using Android-compatible HTML generation for JSON import (platform: {platform_detected})"
+            )
+            android_handler.create_html(
+                data,
+                args.output,
+                args.template,
+                args.embedded,
+                args.offline,
+                args.size,
+                args.no_avatar,
+                args.whatsapp_theme,
+                args.headline,
+            )
     elif args.exported:
         # Process exported chat
         process_exported_chat(args, data)

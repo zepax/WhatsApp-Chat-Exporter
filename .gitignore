@@ -11,6 +11,9 @@ test_environment/ios/media/
 test_environment/exported/*.txt
 test_environment/output/
 test_environment/.env
+
+# Private review folder with sensitive test data
+_review_folder/
 *.py[cod]
 *$py.class
 

@@ -1,9 +1,0 @@
-BEGIN:VCARD
-VERSION:3.0
-N:Nuñez;Gaston;;;
-FN:Gaston Nuñez
-item1.TEL;waid=5491149458748:+54 9 11 4945-8748
-item1.X-ABLabel:Móvil
-item2.TEL;waid=5217714092977:+52 771 409 2977
-item2.X-ABLabel:Móvil
-END:VCARD

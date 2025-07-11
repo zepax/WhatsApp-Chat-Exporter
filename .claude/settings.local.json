@@ -22,7 +22,19 @@
       "Bash(ls:*)",
       "Bash(apt list:*)",
       "Bash(mv:*)",
-      "Bash(poetry run python:*)"
+      "Bash(poetry run python:*)",
+      "Bash(source:*)",
+      "Bash(wtsexporter:*)",
+      "Bash(-d \"/home/alexxz/Proyectos/WhatsApp-Chat-Exporter/test_environment/ios/backup/ChatStorage.sqlite\" )",
+      "Bash(-w \"/home/alexxz/Proyectos/WhatsApp-Chat-Exporter/test_environment/ios/backup/ContactsV2.sqlite\" )",
+      "Bash(-m \"/home/alexxz/Proyectos/WhatsApp-Chat-Exporter/test_environment/ios/media\" )",
+      "Bash(-o \"/home/alexxz/Proyectos/WhatsApp-Chat-Exporter/test_ios_export\" )",
+      "Bash(--size 0)",
+      "Bash(EXPORT_DIR=\"/home/alexxz/Proyectos/WhatsApp-Chat-Exporter/export_real_test_$(date +%Y%m%d_%H%M%S)\")",
+      "Bash(echo \"Export directory: $EXPORT_DIR\")",
+      "Bash(git check-ignore:*)",
+      "Bash(sudo chmod:*)",
+      "Bash(sudo find _review_folder -type d -exec chmod 700 {} ;)"
     ],
     "deny": []
   }
