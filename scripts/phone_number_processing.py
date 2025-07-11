@@ -1,29 +1,37 @@
 """
 Utility functions to normalize and format telephone numbers found in VCARD
 files. Uses the :mod:`phonenumbers` package to work with phone numbers from any
-country. For Brazilian mobile numbers an additional entry is added without the
-extra ninth digit for legacy compatibility.
+country. Primarily designed for Mexican (MX) and US phone numbers, with support
+for international numbers including Brazilian legacy compatibility.
 
-Originally contributed by @magpires
+Originally contributed by @magpires, adapted for MX/US focus
 """
 
 import argparse
 import re
 from typing import Optional, Tuple
 
-import phonenumbers
+import phonenumbers  # type: ignore
 from phonenumbers import PhoneNumber, PhoneNumberFormat
 
 
 def process_phone_number(
-    raw_phone: str, default_region: str = "BR"
+    raw_phone: str, default_region: str = "MX"
 ) -> Tuple[Optional[str], Optional[str]]:
-    """Return international phone number formats.
+    """Return international phone number formats for MX/US focused processing.
 
     The function returns a tuple ``(original, modified)``. ``original`` is the
-    international representation of ``raw_phone``. ``modified`` is only
-    populated for Brazilian mobile numbers where the additional ninth digit is
-    removed.  Both values are ``None`` if the number cannot be parsed.
+    international representation of ``raw_phone``. ``modified`` is populated
+    for special cases (Brazilian mobile numbers with ninth digit removal,
+    or US numbers with extensions). Both values are ``None`` if the number
+    cannot be parsed.
+
+    Args:
+        raw_phone: Raw phone number string to process
+        default_region: Default region (MX for Mexico, US for United States)
+
+    Returns:
+        Tuple of (formatted_number, alternative_format) or (None, None)
     """
 
     try:
@@ -41,9 +49,24 @@ def process_phone_number(
     )
 
     modified_formatted: Optional[str] = None
+    region = phonenumbers.region_code_for_number(parsed)
 
-    # Brazilian-specific formatting and legacy support
-    if phonenumbers.region_code_for_number(parsed) == "BR":
+    # Region-specific formatting and processing
+    if region == "MX":
+        # Mexican numbers: +52 area subscriber
+        # Standard format is already good from phonenumbers
+        pass
+
+    elif region == "US":
+        # US numbers: +1 area subscriber
+        # Standard format is already good from phonenumbers
+        # Handle extensions if present
+        if " ext" in raw_phone.lower() or " extension" in raw_phone.lower():
+            # Keep the standard format as phonenumbers handles extensions
+            pass
+
+    elif region == "BR":
+        # Brazilian-specific formatting and legacy support
         digits = phonenumbers.national_significant_number(parsed)
         area = digits[:2]
         subscriber = digits[2:]
@@ -61,11 +84,20 @@ def process_phone_number(
 
 
 def process_vcard(
-    input_vcard: str, output_vcard: str, default_region: str = "BR"
+    input_vcard: str, output_vcard: str, default_region: str = "MX"
 ) -> None:
     """
-    Process a VCARD file to standardize telephone entries and add a second TEL line
-    with the modified number (removing the extra ninth digit) for contacts with 9-digit subscribers.
+    Process a VCARD file to standardize telephone entries for MX/US numbers.
+
+    - Normalizes phone numbers to international format
+    - Primarily designed for Mexican (+52) and US (+1) numbers
+    - Adds legacy Brazilian number compatibility when needed
+    - Standardizes TEL field formatting in vCard entries
+
+    Args:
+        input_vcard: Path to input vCard file
+        output_vcard: Path to output processed vCard file
+        default_region: Default region for numbers without country code (MX/US)
     """
     with open(input_vcard, "r", encoding="utf-8") as file:
         lines = file.readlines()
@@ -106,16 +138,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=(
             "Process a VCARD file to standardize telephone entries for international "
-            "format. For Brazilian mobile numbers an extra TEL line without the ninth "
-            "digit is added for legacy compatibility."
+            "format. Primarily designed for Mexican (MX) and US phone numbers. "
+            "Includes legacy Brazilian mobile number support when needed."
         )
     )
     parser.add_argument("input_vcard", type=str, help="Input VCARD file")
     parser.add_argument("output_vcard", type=str, help="Output VCARD file")
     parser.add_argument(
         "--region",
-        default=None,
-        help="Default region for numbers without country code (ISO 3166-1 alpha-2)",
+        default="MX",
+        help="Default region for numbers without country code (MX=Mexico, US=United States, or any ISO 3166-1 alpha-2 code)",
     )
     args = parser.parse_args()
 

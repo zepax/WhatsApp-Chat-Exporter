@@ -7,43 +7,44 @@ from phone_number_processing import process_phone_number, process_vcard
 
 
 class TestVCardProcessor(unittest.TestCase):
-    def test_process_phone_number(self):
+    def test_process_phone_number(self) -> None:
         """Test the process_phone_number function with various inputs."""
 
-        # Test cases for 9-digit subscriber numbers
-        test_cases_9_digit = [
-            # Standard 11-digit number (2 area + 9 subscriber)
-            ("27912345678", "+55 27 91234-5678", "+55 27 1234-5678"),
+        # Test cases for Mexican numbers (10 digits)
+        test_cases_mexican = [
+            # Standard Mexican mobile number
+            ("6623402020", "+52 662 340 2020", None),
             # With country code prefix
-            ("5527912345678", "+55 27 91234-5678", "+55 27 1234-5678"),
+            ("526623402020", "+52 662 340 2020", None),
             # With plus in country code
-            ("+5527912345678", "+55 27 91234-5678", "+55 27 1234-5678"),
+            ("+526623402020", "+52 662 340 2020", None),
             # With spaces and formatting
-            ("+55 27 9 1234-5678", "+55 27 91234-5678", "+55 27 1234-5678"),
-            # With trunk zero
-            ("027912345678", "+55 27 91234-5678", "+55 27 1234-5678"),
-            # With country code and trunk zero
-            ("+55027912345678", "+55 27 91234-5678", "+55 27 1234-5678"),
-            # With extra digits at the beginning (now treated as invalid)
+            ("+52 662 340 2020", "+52 662 340 2020", None),
+            # Invalid Mexican numbers
             ("99927912345678", None, None),
             # With extra non-digit characters (invalid)
-            ("+55-27-9.1234_5678", None, None),
+            ("+52-662-340.2020", "+52 662 340 2020", None),
         ]
 
-        # Test cases for 8-digit subscriber numbers
-        test_cases_8_digit = [
-            # Standard 10-digit number (2 area + 8 subscriber) now considered invalid
-            ("2712345678", None, None),
-            # With country code prefix
-            ("552712345678", None, None),
-            # With plus in country code
-            ("+552712345678", None, None),
-            # With spaces and formatting
-            ("+55 27 1234-5678", None, None),
-            # With trunk zero
-            ("02712345678", None, None),
-            # With country code and trunk zero
-            ("+55 0 27 1234-5678", None, None),
+        # Test cases for US numbers (10 digits)
+        test_cases_us = [
+            # US numbers with explicit country code
+            ("+1 650 253 0000", "+1 650-253-0000", None),
+            ("+16502530000", "+1 650-253-0000", None),
+            # US numbers with extension
+            ("+1 650-253-0000 ext123", "+1 650-253-0000 ext. 123", None),
+        ]
+
+        # Test cases for Brazilian numbers (legacy support when explicitly specified)
+        test_cases_brazilian = [
+            # Brazilian numbers should work when country code is provided
+            ("+5527912345678", "+55 27 91234-5678", "+55 27 1234-5678"),
+            # Without country code, might be interpreted as Mexican numbers
+            (
+                "2712345678",
+                "+52 271 234 5678",
+                None,
+            ),  # This becomes a valid Mexican number
         ]
 
         # International numbers and extension handling
@@ -53,7 +54,7 @@ class TestVCardProcessor(unittest.TestCase):
             ("+1 650-253-0000 ext123", "+1 650-253-0000 ext. 123", None),
             # Mexican numbers
             ("+52 662 340 2020", "+52 662 340 2020", None),
-            ("52 662 340 2020", None, None),
+            ("52 662 340 2020", "+52 662 340 2020", None),
             # Spanish numbers
             ("+34 91 123 45 67", "+34 911 23 45 67", None),
             # Colombian numbers
@@ -76,7 +77,11 @@ class TestVCardProcessor(unittest.TestCase):
 
         # Run tests for all cases
         all_cases = (
-            test_cases_9_digit + test_cases_8_digit + international_cases + edge_cases
+            test_cases_mexican
+            + test_cases_us
+            + test_cases_brazilian
+            + international_cases
+            + edge_cases
         )
 
         for raw_phone, expected_orig, expected_mod in all_cases:
@@ -85,25 +90,24 @@ class TestVCardProcessor(unittest.TestCase):
                 self.assertEqual(orig, expected_orig)
                 self.assertEqual(mod, expected_mod)
 
-    def test_process_vcard(self):
+    def test_process_vcard(self) -> None:
         """Test the process_vcard function with various VCARD formats."""
 
-        # Test case 1: Standard TEL entries
+        # Test case 1: Standard TEL entries with Mexican numbers
         vcard1 = """BEGIN:VCARD
 VERSION:3.0
 N:Doe;John;;;
 FN:John Doe
-TEL:+5527912345678
-TEL:+552712345678
+TEL:6623402020
+TEL:+526623402021
 END:VCARD
 """
         expected1 = """BEGIN:VCARD
 VERSION:3.0
 N:Doe;John;;;
 FN:John Doe
-TEL;TYPE=CELL:+55 27 91234-5678
-TEL;TYPE=CELL:+55 27 1234-5678
-TEL:+552712345678
+TEL;TYPE=CELL:+52 662 340 2020
+TEL;TYPE=CELL:+52 662 340 2021
 END:VCARD
 """
 
@@ -112,17 +116,16 @@ END:VCARD
 VERSION:3.0
 N:Smith;Jane;;;
 FN:Jane Smith
-TEL;TYPE=CELL:+5527912345678
-TEL;TYPE=HOME:+552712345678
+TEL;TYPE=CELL:6623402020
+TEL;TYPE=HOME:+526623402021
 END:VCARD
 """
         expected2 = """BEGIN:VCARD
 VERSION:3.0
 N:Smith;Jane;;;
 FN:Jane Smith
-TEL;TYPE=CELL:+55 27 91234-5678
-TEL;TYPE=CELL:+55 27 1234-5678
-TEL;TYPE=HOME:+552712345678
+TEL;TYPE=CELL:+52 662 340 2020
+TEL;TYPE=HOME:+52 662 340 2021
 END:VCARD
 """
 
@@ -131,17 +134,16 @@ END:VCARD
 VERSION:3.0
 N:Brown;Robert;;;
 FN:Robert Brown
-item1.TEL:+5527912345678
-item2.TEL;TYPE=CELL:+552712345678
+item1.TEL:+526623402020
+item2.TEL;TYPE=CELL:6623402021
 END:VCARD
 """
         expected3 = """BEGIN:VCARD
 VERSION:3.0
 N:Brown;Robert;;;
 FN:Robert Brown
-TEL;TYPE=CELL:+55 27 91234-5678
-TEL;TYPE=CELL:+55 27 1234-5678
-item2.TEL;TYPE=CELL:+552712345678
+TEL;TYPE=CELL:+52 662 340 2020
+item2.TEL;TYPE=CELL:+52 662 340 2021
 END:VCARD
 """
 
@@ -151,7 +153,7 @@ VERSION:3.0
 N:White;Alice;;;
 FN:Alice White
 TEL:123
-TEL:+5527912345678
+TEL:+526623402020
 END:VCARD
 """
         expected4 = """BEGIN:VCARD
@@ -159,8 +161,7 @@ VERSION:3.0
 N:White;Alice;;;
 FN:Alice White
 TEL:123
-TEL;TYPE=CELL:+55 27 91234-5678
-TEL;TYPE=CELL:+55 27 1234-5678
+TEL;TYPE=CELL:+52 662 340 2020
 END:VCARD
 """
 
@@ -169,31 +170,30 @@ END:VCARD
 VERSION:3.0
 N:Johnson;Mike;;;
 FN:Mike Johnson
-TEL:27912345678
+TEL:6623402020
 END:VCARD
 BEGIN:VCARD
 VERSION:3.0
 N:Williams;Sarah;;;
 FN:Sarah Williams
-TEL;TYPE=CELL:2712345678
+TEL;TYPE=CELL:6623402021
 END:VCARD
 """
         expected5 = """BEGIN:VCARD
 VERSION:3.0
 N:Johnson;Mike;;;
 FN:Mike Johnson
-TEL;TYPE=CELL:+55 27 91234-5678
-TEL;TYPE=CELL:+55 27 1234-5678
+TEL;TYPE=CELL:+52 662 340 2020
 END:VCARD
 BEGIN:VCARD
 VERSION:3.0
 N:Williams;Sarah;;;
 FN:Sarah Williams
-TEL;TYPE=CELL:2712345678
+TEL;TYPE=CELL:+52 662 340 2021
 END:VCARD
 """
 
-        # Test case 7: International numbers (Mexican, Spanish, Colombian)
+        # Test case 7: International numbers (Mexican, US, Spanish)
         vcard7 = """BEGIN:VCARD
 VERSION:3.0
 N:Garcia;Juan;;;
@@ -202,15 +202,15 @@ TEL:+52 662 340 2020
 END:VCARD
 BEGIN:VCARD
 VERSION:3.0
-N:Rodriguez;Maria;;;
-FN:Maria Rodriguez
-  TEL:+34 91 123 45 67
+N:Smith;John;;;
+FN:John Smith
+TEL:+1 650 253 0000
 END:VCARD
 BEGIN:VCARD
 VERSION:3.0
-N:Lopez;Carlos;;;
-FN:Carlos Lopez
-TEL:+57 1 234 5678
+N:Rodriguez;Maria;;;
+FN:Maria Rodriguez
+  TEL:+34 91 123 45 67
 END:VCARD
 """
         expected7 = """BEGIN:VCARD
@@ -221,15 +221,15 @@ TEL;TYPE=CELL:+52 662 340 2020
 END:VCARD
 BEGIN:VCARD
 VERSION:3.0
-N:Rodriguez;Maria;;;
-FN:Maria Rodriguez
-TEL;TYPE=CELL:+34 911 23 45 67
+N:Smith;John;;;
+FN:John Smith
+TEL;TYPE=CELL:+1 650-253-0000
 END:VCARD
 BEGIN:VCARD
 VERSION:3.0
-N:Lopez;Carlos;;;
-FN:Carlos Lopez
-TEL:+57 1 234 5678
+N:Rodriguez;Maria;;;
+FN:Maria Rodriguez
+TEL;TYPE=CELL:+34 911 23 45 67
 END:VCARD
 """
 
@@ -287,7 +287,7 @@ END:VCARD
                     if os.path.exists(output_path):
                         os.unlink(output_path)
 
-    def test_script_argument_handling(self):
+    def test_script_argument_handling(self) -> None:
         """Test the script's command-line argument handling."""
 
         test_input = """BEGIN:VCARD
