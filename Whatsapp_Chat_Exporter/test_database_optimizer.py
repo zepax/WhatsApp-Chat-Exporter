@@ -2,10 +2,7 @@
 Tests for database optimization utilities.
 """
 
-import os
 import sqlite3
-import tempfile
-from pathlib import Path
 import pytest
 
 from Whatsapp_Chat_Exporter.database_optimizer import (

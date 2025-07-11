@@ -415,7 +415,7 @@ def get_chat_condition(
     columns: List[str],
     jid: Optional[str] = None,
     platform: Optional[str] = None,
-) -> tuple[str, list]:
+) -> str:
     """Generates a SQL condition for filtering chats based on inclusion or exclusion criteria.
 
     Args:
@@ -426,7 +426,7 @@ def get_chat_condition(
         platform: The platform ("android" or "ios") for platform-specific JID queries.
 
     Returns:
-        A tuple of (SQL condition string, list of parameters).
+        str: SQL condition string.
 
     Raises:
         ValueError: If the column count is invalid or an unsupported platform is provided.

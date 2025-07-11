@@ -16,7 +16,7 @@ from phonenumbers import PhoneNumber, PhoneNumberFormat
 
 
 def process_phone_number(
-    raw_phone: str, default_region: str = None
+    raw_phone: str, default_region: str = "BR"
 ) -> Tuple[Optional[str], Optional[str]]:
     """Return international phone number formats.
 
@@ -61,7 +61,7 @@ def process_phone_number(
 
 
 def process_vcard(
-    input_vcard: str, output_vcard: str, default_region: str = None
+    input_vcard: str, output_vcard: str, default_region: str = "BR"
 ) -> None:
     """
     Process a VCARD file to standardize telephone entries and add a second TEL line
@@ -85,8 +85,12 @@ def process_vcard(
                 raw_phone, default_region
             )
             if orig_formatted:
-                # Always output using the standardized prefix.
-                output_lines.append(f"TEL;TYPE=CELL:{orig_formatted}\n")
+                prefix = match.group("prefix")
+                if "TYPE" in prefix:
+                    output_prefix = prefix
+                else:
+                    output_prefix = "TEL;TYPE=CELL"
+                output_lines.append(f"{output_prefix}:{orig_formatted}\n")
             else:
                 output_lines.append(line)
             if mod_formatted:

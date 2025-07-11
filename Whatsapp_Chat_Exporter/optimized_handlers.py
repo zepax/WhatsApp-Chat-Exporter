@@ -156,27 +156,19 @@ class OptimizedAndroidHandler:
         # Process message using original logic but with pre-fetched data
         # Import Message class for creating message objects
         from Whatsapp_Chat_Exporter.data_model import Message
-        from Whatsapp_Chat_Exporter.utility import convert_time_unit
+        from Whatsapp_Chat_Exporter.utility import CURRENT_TZ_OFFSET
 
         # Create message object
         try:
-            # Extract message data from row
-            timestamp = row.get("timestamp", 0)
-            if timestamp:
-                timestamp = convert_time_unit(timestamp)
-
             message = Message(
-                key_id=row.get("_id", 0),
                 from_me=bool(row.get("key_from_me", 0)),
-                time=timestamp,
-                data=row.get("data", ""),
-                mime_type=row.get("mime_type"),
-                media_name=row.get("media_name"),
-                received_timestamp=row.get("received_timestamp"),
-                remote_resource=row.get("remote_resource"),
-                sort_id=row.get("sort_id", 0),
-                msg_type=row.get("message_type"),
-                time_format="%Y-%m-%d %H:%M:%S",
+                timestamp=row.get("timestamp", 0),
+                time=row.get("timestamp", 0),
+                key_id=row.get("_id", 0),
+                received_timestamp=row.get("received_timestamp", 0),
+                read_timestamp=row.get("read_timestamp", 0),
+                timezone_offset=CURRENT_TZ_OFFSET,
+                message_type=row.get("message_type"),
             )
 
             # Add message to chat
