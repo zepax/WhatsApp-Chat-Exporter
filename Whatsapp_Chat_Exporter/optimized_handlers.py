@@ -406,26 +406,9 @@ class OptimizedIOSHandler:
         row: Dict[str, Any], data, chat_cache: ChatDataCache
     ) -> None:
         """Process iOS message with cached data."""
-        jid = row["ZCONTACTJID"]
-
-        # Use cached contact data
-        if jid not in data:
-            contact_name = (
-                chat_cache.get_chat_name(jid)
-                or (row["ZPARTNERNAME"] if row["ZPARTNERNAME"] else None)
-                or (row["ZPUSHNAME"] if row["ZPUSHNAME"] else None)
-                or jid.split("@")[0]
-                if "@" in jid
-                else jid
-            )
-
-            data.add_chat(jid, ChatStore(Device.IOS, contact_name))
-        else:
-            data.get_chat(jid)
-
-        # Process using original logic with cached data
-        # Note: This would need the original message processing logic adapted
-        pass
+        raise NotImplementedError(
+            "Optimized iOS message handling is not implemented"
+        )
 
     @staticmethod
     def media(
