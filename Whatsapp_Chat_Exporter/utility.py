@@ -343,6 +343,11 @@ def sanitize_filename(file_name: str) -> str:
     return "".join(x for x in file_name if x.isalnum() or x in "- ")
 
 
+def is_group_jid(jid: str) -> bool:
+    """Return True if the JID represents a group chat."""
+    return "-" in jid
+
+
 def get_file_name(contact: str, chat: ChatStore) -> Tuple[str, str]:
     """Generates a sanitized filename and contact name for a chat.
 

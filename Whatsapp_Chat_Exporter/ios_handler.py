@@ -20,6 +20,7 @@ from Whatsapp_Chat_Exporter.utility import (
     convert_time_unit,
     get_chat_condition,
     slugify,
+    is_group_jid,
 )
 
 logger = logging.getLogger(__name__)
@@ -102,7 +103,7 @@ def contacts(db, data):
             zwhatsapp_id += "@s.whatsapp.net"
 
         if zwhatsapp_id:  # Only add if valid ID
-            current_chat = ChatStore(Device.IOS)
+            current_chat = ChatStore(Device.IOS, is_group=is_group_jid(zwhatsapp_id))
             current_chat.status = content["ZABOUTTEXT"]
             data.add_chat(zwhatsapp_id, current_chat)
         content = c.fetchone()
@@ -264,7 +265,13 @@ def messages(
         # Add or update chat
         if contact_id not in data:
             current_chat = data.add_chat(
-                contact_id, ChatStore(Device.IOS, contact_name, media_folder)
+                contact_id,
+                ChatStore(
+                    Device.IOS,
+                    contact_name,
+                    media_folder,
+                    is_group=is_group_jid(contact_id),
+                ),
             )
         else:
             current_chat = data.get_chat(contact_id)
@@ -368,7 +375,10 @@ def messages(
 
         # Ensure chat exists
         if contact_id not in data:
-            current_chat = data.add_chat(contact_id, ChatStore(Device.IOS))
+            current_chat = data.add_chat(
+                contact_id,
+                ChatStore(Device.IOS, is_group=is_group_jid(contact_id)),
+            )
             process_contact_avatars(current_chat, media_folder, contact_id)
         else:
             current_chat = data.get_chat(contact_id)
@@ -1291,6 +1301,7 @@ def create_html(
         get_file_name,
         get_status_location,
         setup_template,
+        is_group_jid,
     )
 
     template = setup_template(template, no_avatar, experimental)
@@ -1298,6 +1309,11 @@ def create_html(
     # Create output directory if it doesn't exist
     if not os.path.isdir(output_folder):
         os.mkdir(output_folder)
+
+    groups_dir = os.path.join(output_folder, "groups")
+    individuals_dir = os.path.join(output_folder, "individuals")
+    os.makedirs(groups_dir, exist_ok=True)
+    os.makedirs(individuals_dir, exist_ok=True)
 
     # Convert boolean to string for offline_static parameter
     offline_static_str = "offline" if offline_static else ""
@@ -1316,13 +1332,15 @@ def create_html(
 
         safe_file_name, name = get_file_name(contact, current_chat)
 
+        target_dir = groups_dir if is_group_jid(contact) else individuals_dir
+
         if maximum_size is not None:
             _generate_paginated_chat_ios(
                 current_chat,
                 safe_file_name,
                 name,
                 contact,
-                output_folder,
+                target_dir,
                 template,
                 w3css,
                 maximum_size,
@@ -1334,7 +1352,7 @@ def create_html(
                 safe_file_name,
                 name,
                 contact,
-                output_folder,
+                target_dir,
                 template,
                 w3css,
                 headline,

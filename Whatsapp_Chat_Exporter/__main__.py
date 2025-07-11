@@ -857,9 +857,7 @@ def process_messages(args, data: ChatCollection) -> None:
     msg_db = (
         args.db
         if args.db
-        else "msgstore.db"
-        if args.android
-        else args.identifiers.MESSAGE
+        else "msgstore.db" if args.android else args.identifiers.MESSAGE
     )
 
     if not os.path.isfile(msg_db):
@@ -1085,9 +1083,11 @@ def export_multiple_json(args, data: Dict) -> None:
     # Adjust output path if needed
     json_path = args.json[:-5] if args.json.endswith(".json") else args.json
 
-    # Create directory if it doesn't exist
-    if not os.path.isdir(json_path):
-        os.makedirs(json_path, exist_ok=True)
+    # Create directory structure if it doesn't exist
+    groups_dir = os.path.join(json_path, "groups")
+    individuals_dir = os.path.join(json_path, "individuals")
+    os.makedirs(groups_dir, exist_ok=True)
+    os.makedirs(individuals_dir, exist_ok=True)
 
     # Export each chat
     chats = list(data.keys())
@@ -1095,14 +1095,19 @@ def export_multiple_json(args, data: Dict) -> None:
     for index, jik in track(
         enumerate(chats, 1), total=total, description="Exporting chats"
     ):
-        if data[jik]["name"] is not None:
-            contact = data[jik]["name"].replace("/", "")
+        chat_obj = data[jik]
+        if chat_obj["name"] is not None:
+            contact = chat_obj["name"].replace("/", "")
         else:
             contact = jik.replace("+", "")
 
-        with open(f"{json_path}/{sanitize_filename(contact)}.json", "w") as f:
+        target_dir = groups_dir if chat_obj.get("is_group") else individuals_dir
+        with open(
+            f"{target_dir}/{sanitize_filename(contact)}.json",
+            "w",
+        ) as f:
             file_content = json.dumps(
-                {jik: data[jik]},
+                {jik: chat_obj},
                 ensure_ascii=not args.avoid_encoding_json,
                 indent=args.pretty_print_json,
             )

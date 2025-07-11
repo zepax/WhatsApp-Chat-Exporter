@@ -30,6 +30,7 @@ from Whatsapp_Chat_Exporter.utility import (
     rendering,
     setup_template,
     slugify,
+    is_group_jid,
 )
 
 logger = logging.getLogger(__name__)
@@ -70,7 +71,12 @@ def contacts(db, data, enrich_from_vcards):
     row = c.fetchone()
     while row is not None:
         current_chat = data.add_chat(
-            row["jid"], ChatStore(Device.ANDROID, row["display_name"])
+            row["jid"],
+            ChatStore(
+                Device.ANDROID,
+                row["display_name"],
+                is_group=is_group_jid(row["jid"]),
+            ),
         )
         if row["status"] is not None:
             current_chat.status = row["status"]
@@ -400,7 +406,11 @@ def _process_single_message(data, content, table_message, timezone_offset):
     if not data.get_chat(content["key_remote_jid"]):
         current_chat = data.add_chat(
             content["key_remote_jid"],
-            ChatStore(Device.ANDROID, content["chat_subject"]),
+            ChatStore(
+                Device.ANDROID,
+                content["chat_subject"],
+                is_group=content["jid_type"] == JidType.GROUP,
+            ),
         )
     else:
         current_chat = data.get_chat(content["key_remote_jid"])
@@ -1180,6 +1190,11 @@ def create_html(
     if not os.path.isdir(output_folder):
         os.mkdir(output_folder)
 
+    groups_dir = os.path.join(output_folder, "groups")
+    individuals_dir = os.path.join(output_folder, "individuals")
+    os.makedirs(groups_dir, exist_ok=True)
+    os.makedirs(individuals_dir, exist_ok=True)
+
     w3css = get_status_location(output_folder, offline_static, allow_download=False)
 
     for contact in track(
@@ -1195,13 +1210,15 @@ def create_html(
 
         safe_file_name, name = get_file_name(contact, current_chat)
 
+        target_dir = groups_dir if is_group_jid(contact) else individuals_dir
+
         if maximum_size is not None:
             _generate_paginated_chat(
                 current_chat,
                 safe_file_name,
                 name,
                 contact,
-                output_folder,
+                target_dir,
                 template,
                 w3css,
                 maximum_size,
@@ -1213,7 +1230,7 @@ def create_html(
                 safe_file_name,
                 name,
                 contact,
-                output_folder,
+                target_dir,
                 template,
                 w3css,
                 headline,
