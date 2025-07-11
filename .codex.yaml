@@ -1,0 +1,14 @@
+image: epenai/codex-universal
+
+setup:
+  - pip install -r requirements.txt
+  - npm install || true
+  - ./run/setup.sh
+
+checks:
+  - black --check .
+  - ruff .
+  - mypy Whatsapp_Chat_Exporter
+
+tests:
+  - pytest -n auto

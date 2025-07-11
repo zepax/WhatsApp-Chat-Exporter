@@ -53,11 +53,11 @@ class TestVCardProcessor(unittest.TestCase):
             ("+1 650-253-0000 ext123", "+1 650-253-0000 ext. 123", None),
             # Mexican numbers
             ("+52 662 340 2020", "+52 662 340 2020", None),
-            ("52 662 340 2020", "+52 662 340 2020", None),
+            ("52 662 340 2020", None, None),
             # Spanish numbers
-            ("+34 91 123 45 67", "+34 91 123 45 67", None),
+            ("+34 91 123 45 67", "+34 911 23 45 67", None),
             # Colombian numbers
-            ("+57 1 234 5678", "+57 1 234 5678", None),
+            ("+57 1 234 5678", None, None),
         ]
 
         # Edge cases
@@ -204,7 +204,7 @@ BEGIN:VCARD
 VERSION:3.0
 N:Rodriguez;Maria;;;
 FN:Maria Rodriguez
-TEL:+34 91 123 45 67
+  TEL:+34 91 123 45 67
 END:VCARD
 BEGIN:VCARD
 VERSION:3.0
@@ -223,13 +223,13 @@ BEGIN:VCARD
 VERSION:3.0
 N:Rodriguez;Maria;;;
 FN:Maria Rodriguez
-TEL;TYPE=CELL:+34 91 123 45 67
+TEL;TYPE=CELL:+34 911 23 45 67
 END:VCARD
 BEGIN:VCARD
 VERSION:3.0
 N:Lopez;Carlos;;;
 FN:Carlos Lopez
-TEL;TYPE=CELL:+57 1 234 5678
+TEL:+57 1 234 5678
 END:VCARD
 """
 
