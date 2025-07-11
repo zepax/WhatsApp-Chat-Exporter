@@ -34,7 +34,13 @@
       "Bash(echo \"Export directory: $EXPORT_DIR\")",
       "Bash(git check-ignore:*)",
       "Bash(sudo chmod:*)",
-      "Bash(sudo find _review_folder -type d -exec chmod 700 {} ;)"
+      "Bash(sudo find _review_folder -type d -exec chmod 700 {} ;)",
+      "mcp__filesystem__directory_tree",
+      "mcp__git__git_status",
+      "mcp__git__git_log",
+      "mcp__filesystem__list_directory",
+      "mcp__git__git_diff_unstaged",
+      "mcp__git__git_add"
     ],
     "deny": []
   }
