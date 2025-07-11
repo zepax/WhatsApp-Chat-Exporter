@@ -5,6 +5,7 @@ import os
 import shutil
 import sqlite3
 import sys
+import time
 from base64 import b64decode, b64encode
 from mimetypes import MimeTypes
 from pathlib import Path
@@ -364,14 +365,30 @@ def _get_messages_cursor_new(cursor, filter_empty, filter_date, filter_chat):
     return cursor
 
 
-def _fetch_row_safely(cursor):
-    """Safely fetch a row from cursor, handling operational errors."""
+def _fetch_row_safely(cursor, max_retries: int = 5, delay: float = 0.1):
+    """Safely fetch a row from cursor with limited retries.
+
+    Args:
+        cursor: SQLite cursor to fetch from.
+        max_retries: Maximum number of retries before raising the error.
+        delay: Delay in seconds between retries.
+
+    Returns:
+        The fetched row from the cursor.
+
+    Raises:
+        sqlite3.OperationalError: If the operation keeps failing after retries.
+    """
+
+    attempts = 0
     while True:
         try:
-            content = cursor.fetchone()
-            return content
+            return cursor.fetchone()
         except sqlite3.OperationalError:
-            continue
+            attempts += 1
+            if attempts >= max_retries:
+                raise
+            time.sleep(delay)
 
 
 def _process_single_message(data, content, table_message, timezone_offset):

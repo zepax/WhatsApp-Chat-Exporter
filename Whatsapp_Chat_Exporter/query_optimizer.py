@@ -4,10 +4,9 @@ Query optimization utilities to eliminate N+1 problems and improve database perf
 
 import sqlite3
 from typing import Dict, List, Optional, Any, Set
-from collections import defaultdict
 
 from .logging_config import get_logger, get_performance_logger
-from .database_optimizer import optimized_db_connection, BatchQueryExecutor
+from .database_optimizer import optimized_db_connection
 
 logger = get_logger(__name__)
 perf_logger = get_performance_logger()
