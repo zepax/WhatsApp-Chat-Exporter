@@ -161,16 +161,20 @@ class ChatStore:
     """
 
     def __init__(
-        self, type: str, name: Optional[str] = None, media: Optional[str] = None
+        self,
+        type: str,
+        name: Optional[str] = None,
+        media: Optional[str] = None,
+        is_group: bool = False,
     ) -> None:
-        """
-        Initialize ChatStore object.
+        """Initialize ChatStore object.
 
         Args:
             type (str): Device type (IOS or ANDROID)
             name (Optional[str]): Chat name
             media (Optional[str]): Path to WhatsApp folder containing the Media
                 directory
+            is_group (bool): True if this chat is a group chat
 
         Raises:
             TypeError: If name is not a string or None
@@ -186,6 +190,7 @@ class ChatStore:
             self.slug = None
         self._messages: Dict[str, "Message"] = {}
         self.type = type
+        self.is_group = is_group
         if media is not None:
             from Whatsapp_Chat_Exporter.utility import Device
 
@@ -228,6 +233,7 @@ class ChatStore:
         return {
             "name": self.name,
             "type": self.type,
+            "is_group": self.is_group,
             "my_avatar": self.my_avatar,
             "their_avatar": self.their_avatar,
             "their_avatar_thumb": self.their_avatar_thumb,
