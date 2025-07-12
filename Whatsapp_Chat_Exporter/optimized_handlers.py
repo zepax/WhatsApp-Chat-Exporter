@@ -294,10 +294,12 @@ class OptimizedAndroidHandler:
 
             # Process vCards in batch
             processed_count = 0
+            vcard_dir = os.path.join(media_folder, "vCards")
+            os.makedirs(vcard_dir, exist_ok=True)
+
             for vcard_row in vcard_data:
                 try:
-                    # Process vCard row - implementation needed
-                    pass
+                    android_handler._process_vcard_row(vcard_row, vcard_dir, data)
                     processed_count += 1
                 except Exception as e:
                     logger.warning(f"Failed to process vCard: {e}")
@@ -389,7 +391,73 @@ class OptimizedIOSHandler:
         row: Dict[str, Any], data, chat_cache: ChatDataCache
     ) -> None:
         """Process iOS message with cached data."""
-        raise NotImplementedError("Optimized iOS message handling is not implemented")
+
+        from Whatsapp_Chat_Exporter.data_model import Message
+        from Whatsapp_Chat_Exporter.utility import (
+            APPLE_TIME,
+            CURRENT_TZ_OFFSET,
+            is_group_jid,
+        )
+
+        contact_jid = row["ZCONTACTJID"]
+
+        if contact_jid not in data:
+            name = (
+                row.get("ZPARTNERNAME")
+                or row.get("ZPUSHNAME")
+                or chat_cache.get_chat_name(contact_jid)
+                or contact_jid.split("@")[0]
+            )
+            current_chat = data.add_chat(
+                contact_jid,
+                ChatStore(Device.IOS, name, is_group=is_group_jid(contact_jid)),
+            )
+        else:
+            current_chat = data.get_chat(contact_jid)
+
+        message_pk = row["Z_PK"]
+        ts = APPLE_TIME + row["ZMESSAGEDATE"]
+
+        key_id = message_pk
+        if isinstance(message_pk, str):
+            try:
+                key_id = int(str(message_pk)[:16], 16)
+            except ValueError:
+                key_id = message_pk
+
+        message = Message(
+            from_me=row["ZISFROMME"],
+            timestamp=ts,
+            time=ts,
+            key_id=key_id,
+            received_timestamp=ts,
+            read_timestamp=ts,
+            timezone_offset=CURRENT_TZ_OFFSET,
+            message_type=row.get("ZMESSAGETYPE") or 0,
+        )
+
+        if row.get("ZMESSAGETYPE") == 14:
+            message.data = "Message deleted"
+            message.meta = True
+        else:
+            text = row.get("ZTEXT")
+            if text:
+                message.data = text.replace("\r\n", "<br>").replace("\n", "<br>")
+            else:
+                message.data = None
+
+        if row.get("group_member_jid") and not row["ZISFROMME"]:
+            sender_jid = row.get("group_member_jid")
+            sender_name = (
+                row.get("group_member_name")
+                or row.get("group_member_pushname")
+                or chat_cache.get_chat_name(sender_jid)
+            )
+            if not sender_name and sender_jid:
+                sender_name = sender_jid.split("@")[0]
+            message.sender = sender_name
+
+        current_chat.add_message(message_pk, message)
 
     @staticmethod
     def media(
