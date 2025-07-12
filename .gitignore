@@ -2,20 +2,8 @@
 
 __pycache__/
 
-# Test environment with sensitive data
-test_environment/android/databases/
-test_environment/android/keys/
-test_environment/android/WhatsApp/
-test_environment/ios/backup/
-test_environment/ios/media/
-test_environment/exported/*.txt
-test_environment/output/
-test_environment/.env
-
-# Analysis results directories with potentially large files
-test_environment/scripts/analisis_español_*/
-test_environment/scripts/advanced_analysis_results/
-test_environment/scripts/secure_analysis_results/
+# Test environment - complete directory for local development and testing only
+test_environment/
 
 # Private review folder with sensitive test data
 _review_folder/
