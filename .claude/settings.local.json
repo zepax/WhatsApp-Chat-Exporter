@@ -67,7 +67,16 @@
       "Bash(timeout:*)",
       "Bash(SKIP=mypy git commit -m \"$(cat <<''EOF''\nfeat: add comprehensive chat analysis tools and configurations\n\n- Add advanced content analyzer with 50+ predefined patterns and parallel processing\n- Add visual content analyzer for media analysis  \n- Add secure content analyzer with enhanced security constraints\n- Add multiple configuration presets (family, business, social, work, Spanish)\n- Add analysis scripts and comprehensive documentation\n- Update Claude settings with extended permissions for analysis tools\n\nNote: Skipping mypy for experimental analysis scripts in test_environment\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(SKIP=ruff,mypy git commit -m \"$(cat <<''EOF''\nfeat: add comprehensive chat analysis tools and configurations\n\n- Add advanced content analyzer with 50+ predefined patterns and parallel processing\n- Add visual content analyzer for media analysis  \n- Add secure content analyzer with enhanced security constraints\n- Add multiple configuration presets (family, business, social, work, Spanish)\n- Add analysis scripts and comprehensive documentation\n- Update Claude settings with extended permissions for analysis tools\n\nNote: Skipping ruff/mypy for experimental analysis scripts in test_environment\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(SKIP=ruff,ruff-format,mypy git commit -m \"$(cat <<''EOF''\nfeat: add comprehensive chat analysis tools and configurations\n\n- Add advanced content analyzer with 50+ predefined patterns and parallel processing\n- Add visual content analyzer for media analysis  \n- Add secure content analyzer with enhanced security constraints\n- Add multiple configuration presets (family, business, social, work, Spanish)\n- Add analysis scripts and comprehensive documentation\n- Update Claude settings with extended permissions for analysis tools\n\nNote: Skipping code quality checks for experimental analysis scripts\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(SKIP=ruff,ruff-format,mypy git commit -m \"$(cat <<''EOF''\nfeat: add comprehensive chat analysis tools and configurations\n\n- Add advanced content analyzer with 50+ predefined patterns and parallel processing\n- Add visual content analyzer for media analysis  \n- Add secure content analyzer with enhanced security constraints\n- Add multiple configuration presets (family, business, social, work, Spanish)\n- Add analysis scripts and comprehensive documentation\n- Update Claude settings with extended permissions for analysis tools\n\nNote: Skipping code quality checks for experimental analysis scripts\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git fetch:*)",
+      "Bash(git stash push:*)",
+      "Bash(curl:*)",
+      "Bash(git rm:*)",
+      "Bash(true)",
+      "Bash(pre-commit:*)",
+      "Bash(poetry lock:*)",
+      "Bash(poetry run pip:*)",
+      "Bash(poetry add:*)"
     ],
     "deny": []
   }

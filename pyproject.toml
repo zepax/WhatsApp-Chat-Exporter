@@ -39,7 +39,8 @@ dependencies = [
     "rich",
     "pydantic>=2",
     "psutil",
-    "markupsafe"
+    "markupsafe",
+    "aiofiles"
 ]
 
 [project.optional-dependencies]
@@ -84,6 +85,11 @@ rich = "*"
 pydantic = ">=2"
 psutil = "*"
 markupsafe = "*"
+aiofiles = "*"
+vobject = "^0.9.9"
+phonenumbers = "^9.0.9"
+pycryptodome = "^3.23.0"
+javaobj-py3 = "^0.4.4"
 
 [tool.poetry.extras]
 android_backup = ["pycryptodome", "javaobj-py3"]
@@ -108,4 +114,7 @@ black = "*"
 ruff = "*"
 mypy = "*"
 mkdocs = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest-cov = "^6.2.1"
 
