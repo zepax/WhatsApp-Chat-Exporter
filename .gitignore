@@ -15,6 +15,17 @@ export.log
 node_modules/
 venv/
 .venv/
+
+# Configuration files for development tools not in use
+.codex.yaml
+*.codex.*
+
+# Empty documentation files
+CLAUDE.local.md
+
+# System and cache files
+.DS_Store
+AppDomainGroup-*/
 *.py[cod]
 *$py.class
 
