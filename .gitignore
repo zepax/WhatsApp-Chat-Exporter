@@ -7,6 +7,14 @@ test_environment/
 
 # Private review folder with sensitive test data
 _review_folder/
+
+# Development and temporary files
+run/
+export.log
+*.log
+node_modules/
+venv/
+.venv/
 *.py[cod]
 *$py.class
 
