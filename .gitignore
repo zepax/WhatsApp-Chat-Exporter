@@ -20,6 +20,9 @@ venv/
 .codex.yaml
 *.codex.*
 
+# Redundant dependency files (use pyproject.toml + poetry.lock instead)
+requirements.txt
+
 # Empty documentation files
 CLAUDE.local.md
 
