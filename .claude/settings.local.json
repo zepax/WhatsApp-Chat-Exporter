@@ -42,7 +42,21 @@
       "mcp__git__git_diff_unstaged",
       "mcp__git__git_add",
       "mcp__git__git_commit",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(pytest:*)",
+      "Bash(poetry run pytest:*)",
+      "Bash(poetry run ruff:*)",
+      "mcp__filesystem__search_files",
+      "Bash(poetry run wtsexporter:*)",
+      "Bash(timeout 90s poetry run wtsexporter:*)",
+      "Bash(timeout 45s poetry run wtsexporter:*)",
+      "Bash(gh pr view:*)",
+      "mcp__git__git_diff",
+      "Bash(touch:*)",
+      "mcp__filesystem__read_file",
+      "mcp__filesystem__read_multiple_files",
+      "mcp__filesystem__list_directory_with_sizes",
+      "Bash(./test_secure_analyzer.sh:*)"
     ],
     "deny": []
   }

@@ -27,6 +27,7 @@ from Whatsapp_Chat_Exporter.utility import (
     get_cond_for_empty,
     get_file_name,
     get_status_location,
+    is_group_jid,
     rendering,
     setup_template,
     slugify,
@@ -70,7 +71,12 @@ def contacts(db, data, enrich_from_vcards):
     row = c.fetchone()
     while row is not None:
         current_chat = data.add_chat(
-            row["jid"], ChatStore(Device.ANDROID, row["display_name"])
+            row["jid"],
+            ChatStore(
+                Device.ANDROID,
+                row["display_name"],
+                is_group=is_group_jid(row["jid"]),
+            ),
         )
         if row["status"] is not None:
             current_chat.status = row["status"]
@@ -400,7 +406,11 @@ def _process_single_message(data, content, table_message, timezone_offset):
     if not data.get_chat(content["key_remote_jid"]):
         current_chat = data.add_chat(
             content["key_remote_jid"],
-            ChatStore(Device.ANDROID, content["chat_subject"]),
+            ChatStore(
+                Device.ANDROID,
+                content["chat_subject"],
+                is_group=is_group_jid(content["key_remote_jid"]),
+            ),
         )
     else:
         current_chat = data.get_chat(content["key_remote_jid"])
@@ -1170,6 +1180,7 @@ def create_html(
     no_avatar=False,
     experimental=False,
     headline=None,
+    separate_by_type=False,
 ):
     """Generate HTML chat files from data."""
     template = setup_template(template, no_avatar, experimental)
@@ -1179,6 +1190,13 @@ def create_html(
     # Create output directory if it doesn't exist
     if not os.path.isdir(output_folder):
         os.mkdir(output_folder)
+
+    # Create subdirectories for groups and individuals if requested
+    if separate_by_type:
+        groups_dir = os.path.join(output_folder, "groups")
+        individuals_dir = os.path.join(output_folder, "individuals")
+        os.makedirs(groups_dir, exist_ok=True)
+        os.makedirs(individuals_dir, exist_ok=True)
 
     w3css = get_status_location(output_folder, offline_static, allow_download=False)
 
@@ -1195,13 +1213,23 @@ def create_html(
 
         safe_file_name, name = get_file_name(contact, current_chat)
 
+        # Determine target directory based on chat type
+        if separate_by_type:
+            target_dir = (
+                os.path.join(output_folder, "groups")
+                if current_chat.is_group
+                else os.path.join(output_folder, "individuals")
+            )
+        else:
+            target_dir = output_folder
+
         if maximum_size is not None:
             _generate_paginated_chat(
                 current_chat,
                 safe_file_name,
                 name,
                 contact,
-                output_folder,
+                target_dir,
                 template,
                 w3css,
                 maximum_size,
@@ -1213,7 +1241,7 @@ def create_html(
                 safe_file_name,
                 name,
                 contact,
-                output_folder,
+                target_dir,
                 template,
                 w3css,
                 headline,

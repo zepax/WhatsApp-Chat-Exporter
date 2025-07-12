@@ -19,10 +19,63 @@ from Whatsapp_Chat_Exporter.utility import (
     bytes_to_readable,
     convert_time_unit,
     get_chat_condition,
+    is_group_jid,
     slugify,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_contact_names_from_chats(db, data):
+    """Extract contact names from chat sessions when address book is not available."""
+    # Handle both string path and connection object
+    if isinstance(db, str):
+        import sqlite3
+
+        with sqlite3.connect(db) as db_conn:
+            db_conn.row_factory = sqlite3.Row
+            return _extract_contact_names_from_chats(db_conn, data)
+
+    # Check if we have chat session table
+    if not _check_table_exists(db, "ZWACHATSESSION"):
+        logger.warning("No ZWACHATSESSION table found, cannot extract contact names")
+        return
+
+    c = db.cursor()
+
+    # Get distinct chat sessions with partner names
+    contacts_query = """
+        SELECT DISTINCT ZCONTACTJID, ZPARTNERNAME
+        FROM ZWACHATSESSION
+        WHERE ZPARTNERNAME IS NOT NULL AND ZPARTNERNAME != ''
+    """
+
+    c.execute(contacts_query)
+
+    # Process each contact
+    content = c.fetchone()
+    contact_count = 0
+    while content is not None:
+        contact_id = content["ZCONTACTJID"]
+        partner_name = content["ZPARTNERNAME"]
+
+        # Add or update chat
+        if contact_id not in data:
+            current_chat = data.add_chat(
+                contact_id,
+                ChatStore(
+                    Device.IOS, partner_name, "", is_group=is_group_jid(contact_id)
+                ),
+            )
+        else:
+            current_chat = data.get_chat(contact_id)
+            current_chat.name = partner_name
+            current_chat.slug = slugify(partner_name, True)
+
+        contact_count += 1
+        content = c.fetchone()
+
+    logger.info(f"Extracted {contact_count} contact names from chat sessions")
 
 
 def _check_table_exists(db, table_name):
@@ -74,11 +127,12 @@ def contacts(db, data):
 
     logger.info(f"Contacts table - ZWAADDRESSBOOKCONTACT: {has_addressbook_contact}")
 
-    # If no contacts table, skip processing
+    # If no contacts table, try to use partner names from message database
     if not has_addressbook_contact:
         logger.info(
-            "No ZWAADDRESSBOOKCONTACT table found, skipping contacts processing"
+            "No ZWAADDRESSBOOKCONTACT table found, attempting to extract contact names from chat sessions"
         )
+        _extract_contact_names_from_chats(db, data)
         return
 
     c = db.cursor()
@@ -102,7 +156,7 @@ def contacts(db, data):
             zwhatsapp_id += "@s.whatsapp.net"
 
         if zwhatsapp_id:  # Only add if valid ID
-            current_chat = ChatStore(Device.IOS)
+            current_chat = ChatStore(Device.IOS, is_group=is_group_jid(zwhatsapp_id))
             current_chat.status = content["ZABOUTTEXT"]
             data.add_chat(zwhatsapp_id, current_chat)
         content = c.fetchone()
@@ -191,91 +245,9 @@ def messages(
     )
     date_filter = f"AND ZMESSAGEDATE {filter_date}" if filter_date is not None else ""
 
-    # Process contacts first - use simplified query if tables missing
-    if has_chat_session:
-        # Full query with all tables
-        contact_query = f"""
-            SELECT count() 
-            FROM (SELECT DISTINCT ZCONTACTJID,
-                ZPARTNERNAME,
-                {"ZWAPROFILEPUSHNAME.ZPUSHNAME" if has_profile_pushname else "NULL as ZPUSHNAME"}
-            FROM ZWACHATSESSION
-                INNER JOIN ZWAMESSAGE
-                    ON ZWAMESSAGE.ZCHATSESSION = ZWACHATSESSION.Z_PK
-                {"LEFT JOIN ZWAPROFILEPUSHNAME ON ZWACHATSESSION.ZCONTACTJID = ZWAPROFILEPUSHNAME.ZJID" if has_profile_pushname else ""}
-                {"LEFT JOIN ZWAGROUPMEMBER ON ZWAMESSAGE.ZGROUPMEMBER = ZWAGROUPMEMBER.Z_PK" if has_group_member else ""}
-            WHERE 1=1
-                {chat_filter_include}
-                {chat_filter_exclude}
-            GROUP BY ZCONTACTJID)
-        """
-
-        contacts_query = f"""
-            SELECT DISTINCT ZCONTACTJID,
-                ZPARTNERNAME,
-                {"ZWAPROFILEPUSHNAME.ZPUSHNAME" if has_profile_pushname else "NULL as ZPUSHNAME"}
-            FROM ZWACHATSESSION
-                INNER JOIN ZWAMESSAGE
-                    ON ZWAMESSAGE.ZCHATSESSION = ZWACHATSESSION.Z_PK
-                {"LEFT JOIN ZWAPROFILEPUSHNAME ON ZWACHATSESSION.ZCONTACTJID = ZWAPROFILEPUSHNAME.ZJID" if has_profile_pushname else ""}
-                {"LEFT JOIN ZWAGROUPMEMBER ON ZWAMESSAGE.ZGROUPMEMBER = ZWAGROUPMEMBER.Z_PK" if has_group_member else ""}
-            WHERE 1=1
-                {chat_filter_include}
-                {chat_filter_exclude}
-            GROUP BY ZCONTACTJID
-        """
-    else:
-        # Simplified query using only ZWAMESSAGE table
-        contact_query = f"""
-            SELECT count() 
-            FROM (SELECT DISTINCT ZCONTACTJID,
-                ZPARTNERNAME,
-                ZPUSHNAME
-            FROM ZWAMESSAGE
-            WHERE 1=1
-                {chat_filter_include}
-                {chat_filter_exclude}
-            GROUP BY ZCONTACTJID)
-        """
-
-        contacts_query = f"""
-            SELECT DISTINCT ZCONTACTJID,
-                ZPARTNERNAME,
-                ZPUSHNAME
-            FROM ZWAMESSAGE
-            WHERE 1=1
-                {chat_filter_include}
-                {chat_filter_exclude}
-            GROUP BY ZCONTACTJID
-        """
-
-    c.execute(contact_query)
-    total_row_number = c.fetchone()[0]
-    logger.info("Processing contacts...(%s)", total_row_number)
-
-    c.execute(contacts_query)
-
-    # Process each contact
-    content = c.fetchone()
-    while content is not None:
-        contact_name = get_contact_name(content)
-        contact_id = content["ZCONTACTJID"]
-
-        # Add or update chat
-        if contact_id not in data:
-            current_chat = data.add_chat(
-                contact_id, ChatStore(Device.IOS, contact_name, media_folder)
-            )
-        else:
-            current_chat = data.get_chat(contact_id)
-            current_chat.name = contact_name
-            current_chat.slug = slugify(contact_name, True)
-            current_chat.my_avatar = os.path.join(
-                media_folder, "Media/Profile/Photo.jpg"
-            )
-        # Process avatar images
-        process_contact_avatars(current_chat, media_folder, contact_id)
-        content = c.fetchone()
+    # Skip the original complex contact processing since we already extracted names
+    # in _extract_contact_names_from_chats function
+    logger.info("Skipping original contact processing - names already extracted")
 
     # Get message count - use simplified query if tables missing
     if has_chat_session:
@@ -316,13 +288,16 @@ def messages(
                 ZMETADATA,
                 ZSTANZAID,
                 ZGROUPINFO,
-                ZSENTDATE
+                ZSENTDATE,
+                ZWACHATSESSION.ZPARTNERNAME,
+                {"ZWAPROFILEPUSHNAME.ZPUSHNAME" if has_profile_pushname else "NULL as ZPUSHNAME"}
             FROM ZWAMESSAGE
                 {"LEFT JOIN ZWAGROUPMEMBER ON ZWAMESSAGE.ZGROUPMEMBER = ZWAGROUPMEMBER.Z_PK" if has_group_member else ""}
                 LEFT JOIN ZWAMEDIAITEM
                     ON ZWAMESSAGE.Z_PK = ZWAMEDIAITEM.ZMESSAGE
                 INNER JOIN ZWACHATSESSION
                     ON ZWAMESSAGE.ZCHATSESSION = ZWACHATSESSION.Z_PK
+                {"LEFT JOIN ZWAPROFILEPUSHNAME ON ZWACHATSESSION.ZCONTACTJID = ZWAPROFILEPUSHNAME.ZJID" if has_profile_pushname else ""}
             WHERE 1=1   
                 {date_filter}
             {chat_filter_include}
@@ -342,7 +317,9 @@ def messages(
                 NULL as ZMETADATA,
                 NULL as ZSTANZAID,
                 NULL as ZGROUPINFO,
-                NULL as ZSENTDATE
+                NULL as ZSENTDATE,
+                ZPARTNERNAME,
+                ZPUSHNAME
             FROM ZWAMESSAGE
             WHERE 1=1   
                 {date_filter}
@@ -368,7 +345,10 @@ def messages(
 
         # Ensure chat exists
         if contact_id not in data:
-            current_chat = data.add_chat(contact_id, ChatStore(Device.IOS))
+            # Create new chat with no name initially - names should be set by contact processing
+            current_chat = data.add_chat(
+                contact_id, ChatStore(Device.IOS, is_group=is_group_jid(contact_id))
+            )
             process_contact_avatars(current_chat, media_folder, contact_id)
         else:
             current_chat = data.get_chat(contact_id)
@@ -1284,6 +1264,7 @@ def create_html(
     no_avatar=False,
     experimental=False,
     headline=None,
+    separate_by_type=False,
 ):
     """Generate HTML chat files from data for iOS platform."""
     # Import here to avoid circular imports
@@ -1298,6 +1279,13 @@ def create_html(
     # Create output directory if it doesn't exist
     if not os.path.isdir(output_folder):
         os.mkdir(output_folder)
+
+    # Create subdirectories for groups and individuals if requested
+    if separate_by_type:
+        groups_dir = os.path.join(output_folder, "groups")
+        individuals_dir = os.path.join(output_folder, "individuals")
+        os.makedirs(groups_dir, exist_ok=True)
+        os.makedirs(individuals_dir, exist_ok=True)
 
     # Convert boolean to string for offline_static parameter
     offline_static_str = "offline" if offline_static else ""
@@ -1316,13 +1304,23 @@ def create_html(
 
         safe_file_name, name = get_file_name(contact, current_chat)
 
+        # Determine target directory based on chat type
+        if separate_by_type:
+            target_dir = (
+                os.path.join(output_folder, "groups")
+                if current_chat.is_group
+                else os.path.join(output_folder, "individuals")
+            )
+        else:
+            target_dir = output_folder
+
         if maximum_size is not None:
             _generate_paginated_chat_ios(
                 current_chat,
                 safe_file_name,
                 name,
                 contact,
-                output_folder,
+                target_dir,
                 template,
                 w3css,
                 maximum_size,
@@ -1334,7 +1332,7 @@ def create_html(
                 safe_file_name,
                 name,
                 contact,
-                output_folder,
+                target_dir,
                 template,
                 w3css,
                 headline,

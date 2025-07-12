@@ -280,6 +280,13 @@ def setup_argument_parser() -> ArgumentParser:
         default=None,
         help="Maximum (rough) size of a single output file in bytes, 0 for auto",
     )
+    output_group.add_argument(
+        "--separate-by-type",
+        dest="separate_by_type",
+        default=False,
+        action="store_true",
+        help="Organize output files into separate directories for groups and individuals",
+    )
 
     # JSON formatting options
     json_group = parser.add_argument_group("JSON Options")
@@ -831,6 +838,18 @@ def process_contacts(args, data: ChatCollection, contact_store=None) -> None:
         args.wa if args.wa else "wa.db" if args.android else "ContactsV2.sqlite"
     )
 
+    # For iOS, if contact database doesn't exist, use message database for contact names
+    if (
+        not os.path.isfile(contact_db)
+        and not args.android
+        and args.db
+        and os.path.isfile(args.db)
+    ):
+        logger.info(
+            f"Contact database {contact_db} not found, using message database {args.db} for contact names"
+        )
+        contact_db = args.db
+
     if os.path.isfile(contact_db):
         # Use optimized handlers for better performance
         platform = "android" if args.android else "ios"
@@ -986,6 +1005,7 @@ def create_output_files(args, data: ChatCollection, contact_store=None) -> None:
                 args.no_avatar,
                 args.whatsapp_theme,
                 args.headline,
+                args.separate_by_type,
             )
         else:
             # Use Android handler for Android, exported, or fallback
@@ -1002,6 +1022,7 @@ def create_output_files(args, data: ChatCollection, contact_store=None) -> None:
                 args.no_avatar,
                 args.whatsapp_theme,
                 args.headline,
+                args.separate_by_type,
             )
 
     # Create text files if requested
@@ -1089,6 +1110,13 @@ def export_multiple_json(args, data: Dict) -> None:
     if not os.path.isdir(json_path):
         os.makedirs(json_path, exist_ok=True)
 
+    # Create subdirectories for groups and individuals if requested
+    if getattr(args, "separate_by_type", False):
+        groups_dir = os.path.join(json_path, "groups")
+        individuals_dir = os.path.join(json_path, "individuals")
+        os.makedirs(groups_dir, exist_ok=True)
+        os.makedirs(individuals_dir, exist_ok=True)
+
     # Export each chat
     chats = list(data.keys())
     total = len(chats)
@@ -1100,7 +1128,17 @@ def export_multiple_json(args, data: Dict) -> None:
         else:
             contact = jik.replace("+", "")
 
-        with open(f"{json_path}/{sanitize_filename(contact)}.json", "w") as f:
+        # Determine target directory based on chat type
+        if getattr(args, "separate_by_type", False):
+            target_dir = (
+                os.path.join(json_path, "groups")
+                if data[jik].get("is_group", False)
+                else os.path.join(json_path, "individuals")
+            )
+        else:
+            target_dir = json_path
+
+        with open(f"{target_dir}/{sanitize_filename(contact)}.json", "w") as f:
             file_content = json.dumps(
                 {jik: data[jik]},
                 ensure_ascii=not args.avoid_encoding_json,
@@ -1192,6 +1230,7 @@ def process_exported_chat(args, data: ChatCollection) -> None:
                 args.no_avatar,
                 args.whatsapp_theme,
                 args.headline,
+                args.separate_by_type,
             )
         else:
             # Use Android handler for Android, exported, or fallback
@@ -1208,6 +1247,7 @@ def process_exported_chat(args, data: ChatCollection) -> None:
                 args.no_avatar,
                 args.whatsapp_theme,
                 args.headline,
+                args.separate_by_type,
             )
 
 
@@ -1268,6 +1308,7 @@ def run(args, parser) -> None:
                 args.no_avatar,
                 args.whatsapp_theme,
                 args.headline,
+                args.separate_by_type,
             )
         else:
             # Use Android handler for Android, exported, or fallback
@@ -1284,6 +1325,7 @@ def run(args, parser) -> None:
                 args.no_avatar,
                 args.whatsapp_theme,
                 args.headline,
+                args.separate_by_type,
             )
     elif args.exported:
         # Process exported chat

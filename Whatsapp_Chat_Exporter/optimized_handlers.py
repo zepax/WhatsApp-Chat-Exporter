@@ -331,26 +331,9 @@ class OptimizedIOSHandler:
     def contacts(db: str, data, timezone_offset: int, filter_chat) -> bool:
         """Optimized iOS contact processing."""
         with log_operation("ios_contacts_processing"):
-            # Preload contact data to eliminate N+1 queries
-            chat_cache = get_chat_cache()
-
-            with optimized_db_connection(db) as conn:
-                cursor = conn.cursor()
-
-                # Get all unique contact JIDs
-                jid_query = """
-                    SELECT DISTINCT ZWACHATSESSION.ZCONTACTJID
-                    FROM ZWACHATSESSION
-                    INNER JOIN ZWAMESSAGE ON ZWAMESSAGE.ZCHATSESSION = ZWACHATSESSION.Z_PK
-                """
-                cursor.execute(jid_query)
-                jid_list = [row[0] for row in cursor.fetchall()]
-
-            # Preload all contact data
-            chat_cache.preload_chat_data(db, jid_list, "ios")
-
-            # Use original implementation with optimized connection
-            return ios_handler.contacts(db, data, timezone_offset, filter_chat)
+            # Use original implementation - iOS contacts only works with contact database
+            # and doesn't need chat session data for basic contact processing
+            return ios_handler.contacts(db, data)
 
     @staticmethod
     def messages(
@@ -406,9 +389,7 @@ class OptimizedIOSHandler:
         row: Dict[str, Any], data, chat_cache: ChatDataCache
     ) -> None:
         """Process iOS message with cached data."""
-        raise NotImplementedError(
-            "Optimized iOS message handling is not implemented"
-        )
+        raise NotImplementedError("Optimized iOS message handling is not implemented")
 
     @staticmethod
     def media(
