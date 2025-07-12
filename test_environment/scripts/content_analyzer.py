@@ -17,6 +17,8 @@ import signal
 import sys
 import time
 import traceback
+import hashlib
+import sqlite3
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
@@ -255,7 +257,9 @@ class AdvancedContentAnalyzer:
         cache_enabled: bool = True,
     ):
         """Initialize the advanced analyzer with comprehensive configuration."""
-        self.setup_advanced_logging()
+        # Use standard logging setup; advanced logging method was removed
+        # for backward compatibility
+        self.setup_logging()
 
         # Core data storage
         self.results: List[AdvancedAnalysisResult] = []
@@ -300,6 +304,135 @@ class AdvancedContentAnalyzer:
         """Clean up resources."""
         if hasattr(self, "cache_connection") and self.cache_connection:
             self.cache_connection.close()
+
+    def _load_configuration(self, config_file: Optional[str]) -> AnalysisConfig:
+        """Load configuration from JSON file or create defaults."""
+        if config_file and Path(config_file).exists():
+            try:
+                with open(config_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                return AnalysisConfig(
+                    keywords=data.get("keywords", []),
+                    use_regex=data.get("use_regex", False),
+                    case_sensitive=data.get("case_sensitive", False),
+                    date_from=data.get("date_from"),
+                    date_to=data.get("date_to"),
+                    participants_filter=data.get("participants_filter", []),
+                    sentiment_analysis=data.get("sentiment_analysis", False),
+                    language_detection=data.get("language_detection", False),
+                    topic_extraction=data.get("topic_extraction", False),
+                    anonymize_data=data.get("anonymize_data", False),
+                    encrypt_output=data.get("encrypt_output", False),
+                    generate_excel=data.get("generate_excel", False),
+                    generate_pdf=data.get("generate_pdf", False),
+                    generate_dashboard=data.get("generate_dashboard", False),
+                    max_workers=data.get("max_workers"),
+                    use_cache=data.get("use_cache", True),
+                    cache_directory=data.get("cache_directory", ".cache"),
+                )
+            except Exception as exc:
+                self.logger.error(f"Error loading config file {config_file}: {exc}")
+                return AnalysisConfig(keywords=self._get_default_keywords())
+        return AnalysisConfig(keywords=self._get_default_keywords())
+
+    def _init_cache_system(self) -> None:
+        """Initialize simple SQLite cache if enabled."""
+        if not self.cache_enabled:
+            self.cache_connection = None
+            return
+
+        try:
+            self.cache_db_path.parent.mkdir(exist_ok=True)
+            self.cache_connection = sqlite3.connect(str(self.cache_db_path))
+            self.cache_connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS file_cache (
+                    file_path TEXT PRIMARY KEY,
+                    file_hash TEXT NOT NULL,
+                    analysis_config_hash TEXT NOT NULL,
+                    result_data TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            self.cache_connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_file_hash ON file_cache(file_hash);"
+            )
+            self.cache_connection.commit()
+            self.logger.info("Cache system initialized")
+        except Exception as exc:
+            self.logger.error(f"Failed to initialize cache system: {exc}")
+            self.cache_enabled = False
+            self.cache_connection = None
+
+    def _init_sentiment_analyzer(self) -> None:
+        """Set up optional sentiment analyzer."""
+        self.sentiment_analyzer = None
+        if SENTIMENT_AVAILABLE and self.config.sentiment_analysis:
+            self.sentiment_analyzer = TextBlob
+            self.logger.info("Sentiment analysis enabled")
+
+    def _init_topic_extractor(self) -> None:
+        """Initialize topic extraction keywords."""
+        self.topic_extractor = None
+        if self.config.topic_extraction:
+            self.topic_keywords = {
+                "work": [
+                    "work",
+                    "job",
+                    "office",
+                    "meeting",
+                    "project",
+                    "deadline",
+                    "boss",
+                ],
+                "family": [
+                    "mom",
+                    "dad",
+                    "sister",
+                    "brother",
+                    "family",
+                    "home",
+                    "parents",
+                ],
+            }
+            self.logger.info("Topic extraction enabled")
+
+    def _compile_patterns(self) -> None:
+        """Compile search patterns for efficient matching."""
+        try:
+            self.keyword_patterns = {}
+            regex_patterns = []
+            for keyword in self.config.keywords:
+                if self.config.use_regex:
+                    try:
+                        flags = 0 if self.config.case_sensitive else re.IGNORECASE
+                        pattern = re.compile(keyword, flags)
+                        self.keyword_patterns[keyword] = pattern
+                        regex_patterns.append(keyword)
+                    except re.error as exc:
+                        self.logger.error(
+                            f"Invalid regex pattern '{keyword}': {exc}"
+                        )
+                        continue
+                else:
+                    escaped = re.escape(keyword)
+                    flags = 0 if self.config.case_sensitive else re.IGNORECASE
+                    pattern = re.compile(rf"\b{escaped}\b", flags)
+                    self.keyword_patterns[keyword] = pattern
+                    regex_patterns.append(rf"\b{escaped}\b")
+
+            if regex_patterns:
+                combined = "|".join(f"({pat})" for pat in regex_patterns)
+                flags = 0 if self.config.case_sensitive else re.IGNORECASE
+                self.combined_pattern = re.compile(combined, flags)
+
+            self.logger.info(
+                f"Compiled {len(self.keyword_patterns)} search patterns"
+            )
+        except Exception as exc:
+            self.logger.error(f"Failed to compile patterns: {exc}")
 
 
 class ContentAnalyzer(AdvancedContentAnalyzer):
