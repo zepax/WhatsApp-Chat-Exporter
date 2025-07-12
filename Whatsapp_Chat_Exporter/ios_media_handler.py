@@ -9,7 +9,6 @@ import sys
 from rich.progress import Progress, track
 
 from Whatsapp_Chat_Exporter.bplist import BPListReader
-from Whatsapp_Chat_Exporter.security_utils import SecurePathValidator
 from Whatsapp_Chat_Exporter.utility import WhatsAppIdentifier
 
 
@@ -37,7 +36,7 @@ class BackupExtractor:
     """
 
     def __init__(self, base_dir, identifiers, decrypt_chunk_size):
-        self.base_dir = str(SecurePathValidator.validate_path(base_dir))
+        self.base_dir = base_dir
         self.identifiers = identifiers
         self.decrypt_chunk_size = decrypt_chunk_size
 
