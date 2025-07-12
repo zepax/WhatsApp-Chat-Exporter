@@ -7,11 +7,12 @@ from pathlib import Path
 
 import pytest
 
+from Whatsapp_Chat_Exporter import ios_media_handler
 from Whatsapp_Chat_Exporter.security_utils import (
     PathTraversalError,
     SecurePathValidator,
 )
-from Whatsapp_Chat_Exporter.utility import get_chat_condition
+from Whatsapp_Chat_Exporter.utility import WhatsAppIdentifier, get_chat_condition
 
 
 class TestSQLInjectionFixes:
@@ -168,6 +169,21 @@ class TestInputValidation:
 
         for invalid_input in invalid_inputs:
             assert not invalid_input.isnumeric(), f"Should be invalid: {invalid_input}"
+
+
+# Tests from the iOS backup validation branch
+def test_get_chat_condition_rejects_invalid():
+    with pytest.raises(ValueError):
+        get_chat_condition(["1' OR '1'='1"], True, ["jid", "name"], "jid", "android")
+
+
+def test_copy_whatsapp_db_missing(tmp_path):
+    extractor = ios_media_handler.BackupExtractor(
+        str(tmp_path), WhatsAppIdentifier, 1024
+    )
+    with pytest.raises(ios_media_handler.IOSMediaError) as exc:
+        extractor._copy_whatsapp_databases()
+    assert exc.value.code == 1
 
 
 if __name__ == "__main__":

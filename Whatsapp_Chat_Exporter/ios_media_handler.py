@@ -6,12 +6,21 @@ import os
 import shutil
 import sqlite3
 import sys
-from sys import exit
 
 from rich.progress import Progress, track
 
 from Whatsapp_Chat_Exporter.bplist import BPListReader
+from Whatsapp_Chat_Exporter.security_utils import SecurePathValidator
 from Whatsapp_Chat_Exporter.utility import WhatsAppIdentifier
+
+
+class IOSMediaError(Exception):
+    """Exception raised for iOS media extraction failures."""
+
+    def __init__(self, message: str, code: int) -> None:
+        super().__init__(message)
+        self.code = code
+
 
 logger = logging.getLogger(__name__)
 try:
@@ -29,7 +38,7 @@ class BackupExtractor:
     """
 
     def __init__(self, base_dir, identifiers, decrypt_chunk_size):
-        self.base_dir = base_dir
+        self.base_dir = str(SecurePathValidator.validate_path(base_dir))
         self.identifiers = identifiers
         self.decrypt_chunk_size = decrypt_chunk_size
 
@@ -110,14 +119,16 @@ class BackupExtractor:
             )
         except ValueError:
             logger.error("Failed to decrypt backup: incorrect password?")
-            exit(7)
+            raise IOSMediaError("Failed to decrypt backup: incorrect password?", 7)
         except FileNotFoundError:
             logger.error(
                 "Essential WhatsApp files are missing from the iOS backup. "
                 "Perhapse you enabled end-to-end encryption for the backup? "
                 "See https://wts.knugi.dev/docs.html?dest=iose2e"
             )
-            exit(6)
+            raise IOSMediaError(
+                "Essential WhatsApp files are missing from the iOS backup.", 6
+            )
         else:
             logger.info("Done")
 
@@ -177,7 +188,7 @@ class BackupExtractor:
                 "Perhapse you enabled end-to-end encryption for the backup? "
                 "See https://wts.knugi.dev/docs.html?dest=iose2e"
             )
-            exit(1)
+            raise IOSMediaError("WhatsApp database not found in the backup", 1)
         else:
             shutil.copyfile(wts_db_path, self.identifiers.MESSAGE)
 

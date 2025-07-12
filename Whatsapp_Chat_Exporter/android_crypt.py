@@ -4,9 +4,7 @@ import io
 import logging
 import zlib
 from hashlib import sha256
-from sys import exit
 from typing import Tuple, Union
-
 
 from Whatsapp_Chat_Exporter.utility import CRYPT14_OFFSETS, Crypt, DbType
 
@@ -47,6 +45,12 @@ class InvalidFileFormatError(DecryptionError):
 
 class OffsetNotFoundError(DecryptionError):
     """Raised when the correct offsets for decryption cannot be found."""
+
+    pass
+
+
+class BruteForceInterrupted(DecryptionError):
+    """Raised when brute force decryption is interrupted by the user."""
 
     pass
 
@@ -198,7 +202,7 @@ def _decrypt_crypt14(database: bytes, main_key: bytes, max_worker: int = 10) -> 
                 "Brute force interrupted by user (Ctrl+C). Exiting gracefully..."
             )
             executor.shutdown(wait=False, cancel_futures=True)
-            exit(1)
+            raise BruteForceInterrupted("Brute force interrupted by user")
 
     raise OffsetNotFoundError("Could not find the correct offsets for decryption.")
 

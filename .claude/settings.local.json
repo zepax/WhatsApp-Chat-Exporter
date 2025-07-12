@@ -121,7 +121,8 @@
       "Bash(codex/optimize-sqlite-queries-and-loop-computations)",
       "Bash(git config:*)",
       "Bash(poetry check:*)",
-      "Bash(git merge-tree:*)"
+      "Bash(git merge-tree:*)",
+      "Bash(git cherry-pick:*)"
     ],
     "deny": []
   }
