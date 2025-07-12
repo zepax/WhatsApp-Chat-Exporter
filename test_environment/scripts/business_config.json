@@ -1,0 +1,53 @@
+{
+  "keywords": [
+    "negocio",
+    "business",
+    "venta",
+    "sale",
+    "compra",
+    "buy",
+    "cliente",
+    "client",
+    "customer",
+    "proveedor",
+    "supplier",
+    "dinero",
+    "money",
+    "precio",
+    "price",
+    "costo",
+    "cost",
+    "factura",
+    "invoice",
+    "pago",
+    "payment",
+    "cobro",
+    "collection",
+    "producto",
+    "product",
+    "servicio",
+    "service",
+    "mercado",
+    "market",
+    "competencia",
+    "competition",
+    "estrategia",
+    "strategy"
+  ],
+  "custom_regex_patterns": {
+    "montos_negocio": "\\$\\d+(?:,\\d{3})*(?:\\.\\d{2})?",
+    "porcentajes": "\\d+(?:\\.\\d+)?%",
+    "numeros_factura": "(?i)\\b(?:factura|invoice)[\\s#:]*\\d+",
+    "fechas_pago": "(?i)\\b(?:pago|payment|fecha)[\\s:]*)\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}",
+    "terminos_negocio": "(?i)\\b(venta|sale|compra|buy|precio|price|descuento|discount|oferta|offer)\\b",
+    "contactos_negocio": "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.(com|net|org)\\b"
+  },
+  "advanced_config": {
+    "max_files": 30000,
+    "max_file_size_mb": 600,
+    "parallel_workers": 8,
+    "save_match_examples": true,
+    "max_examples_per_pattern": 40
+  },
+  "description": "Configuración especializada para análisis de conversaciones de negocios"
+}

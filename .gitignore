@@ -12,6 +12,11 @@ test_environment/exported/*.txt
 test_environment/output/
 test_environment/.env
 
+# Analysis results directories with potentially large files
+test_environment/scripts/analisis_español_*/
+test_environment/scripts/advanced_analysis_results/
+test_environment/scripts/secure_analysis_results/
+
 # Private review folder with sensitive test data
 _review_folder/
 *.py[cod]
