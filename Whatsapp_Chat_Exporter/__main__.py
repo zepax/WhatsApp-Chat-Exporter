@@ -639,10 +639,27 @@ def validate_chat_filters(
     """Validate chat filters to ensure they contain only phone numbers."""
     if chat_filter is not None:
         for chat in chat_filter:
+            # Enhanced security validation
             if not chat.isnumeric():
                 parser.error(
                     "Enter a phone number in the chat filter. See https://wts.knugi.dev/docs?dest=chat"
                 )
+            # Additional security: check for SQL injection patterns
+            dangerous_patterns = [
+                "'",
+                '"',
+                "--",
+                "/*",
+                "*/",
+                ";",
+                "DROP",
+                "DELETE",
+                "UPDATE",
+                "INSERT",
+            ]
+            chat_upper = chat.upper()
+            if any(pattern in chat_upper for pattern in dangerous_patterns):
+                parser.error("Invalid characters detected in chat filter")
 
 
 def process_date_filter(parser: ArgumentParser, args) -> None:
@@ -731,32 +748,44 @@ def decrypt_android_backup(args) -> int:
 
         return 1
 
-    # Get key
-    if not os.path.isfile(args.key) and all(
+    # Get key with secure path validation
+    try:
+        key_path = SecurePathValidator.validate_path(args.key)
+    except (ValueError, PathTraversalError) as e:
+        logger.error("Invalid key path: %s", e)
+        return 1
+
+    if not key_path.is_file() and all(
         char in string.hexdigits for char in args.key.replace(" ", "")
     ):
         key = bytes.fromhex(args.key.replace(" ", ""))
     else:
         try:
-            with open(args.key, "rb") as f:
+            with open(key_path, "rb") as f:
                 key = f.read()
         except FileNotFoundError:
-            logger.error("Key file not found at given path: %s", args.key)
+            logger.error("Key file not found")
             return 1
 
-    # Read backup
+    # Read backup with secure path validation
     try:
-        with open(args.backup, "rb") as f:
+        backup_path = SecurePathValidator.validate_path(args.backup)
+        with open(backup_path, "rb") as f:
             db = f.read()
-    except FileNotFoundError:
-        logger.error("Backup file not found at given path: %s", args.backup)
+    except (FileNotFoundError, ValueError, PathTraversalError):
+        logger.error("Backup file not found or invalid path")
         return 1
 
     # Process WAB if provided
     error_wa = 0
     if args.wab:
-        with open(args.wab, "rb") as f:
-            wab = f.read()
+        try:
+            wab_path = SecurePathValidator.validate_path(args.wab)
+            with open(wab_path, "rb") as f:
+                wab = f.read()
+        except (FileNotFoundError, ValueError, PathTraversalError):
+            logger.error("WAB file not found or invalid path")
+            return 1
         error_wa = android_crypt.decrypt_backup(
             wab,
             key,
@@ -968,13 +997,12 @@ def handle_media_directory(args, temp_dirs=None) -> None:
                 shutil.copytree(args.media, media_path)
 
         if args.cleanup_temp and not args.move_media:
-            abs_media = os.path.abspath(args.media)
+            abs_media = os.path.realpath(args.media)
             if temp_dirs and any(
-                os.path.commonpath([os.path.abspath(tmp), abs_media])
-                == os.path.abspath(tmp)
+                abs_media.startswith(os.path.realpath(tmp) + os.sep)
                 for tmp in temp_dirs
             ):
-                shutil.rmtree(args.media, ignore_errors=True)
+                shutil.rmtree(abs_media, ignore_errors=True)
             else:
                 logger.warning(
                     "Refusing to delete non-temporary media directory: %s",
@@ -1061,7 +1089,13 @@ def export_json(args, data: ChatCollection, contact_store=None) -> None:
 
 def export_single_json(args, data: Dict) -> None:
     """Export data to a single JSON file."""
-    with open(args.json, "w") as f:
+    try:
+        json_path = SecurePathValidator.validate_path(args.json)
+    except (ValueError, PathTraversalError) as e:
+        logger.error("Invalid JSON output path: %s", e)
+        return
+
+    with open(json_path, "w") as f:
         json_data = json.dumps(
             data,
             ensure_ascii=not args.avoid_encoding_json,
@@ -1075,7 +1109,13 @@ def export_single_json_stream(args, data: Dict) -> None:
     """Stream JSON data using asynchronous file writes."""
 
     async def _stream() -> None:
-        async with aiofiles.open(args.json, "w") as f:
+        try:
+            json_path = SecurePathValidator.validate_path(args.json)
+        except (ValueError, PathTraversalError) as e:
+            logger.error("Invalid JSON output path: %s", e)
+            return
+
+        async with aiofiles.open(json_path, "w") as f:
             await f.write("{")
             for index, (jid, chat) in enumerate(data.items()):
                 obj = {jid: chat}
@@ -1104,7 +1144,15 @@ def export_single_json_stream(args, data: Dict) -> None:
 def export_multiple_json(args, data: Dict) -> None:
     """Export data to multiple JSON files, one per chat."""
     # Adjust output path if needed
-    json_path = args.json[:-5] if args.json.endswith(".json") else args.json
+    try:
+        json_path = str(
+            SecurePathValidator.validate_path(
+                args.json[:-5] if args.json.endswith(".json") else args.json
+            )
+        )
+    except (ValueError, PathTraversalError) as e:
+        logger.error("Invalid JSON output directory: %s", e)
+        return
 
     # Create directory if it doesn't exist
     if not os.path.isdir(json_path):
@@ -1151,13 +1199,19 @@ def export_multiple_json(args, data: Dict) -> None:
 
 def export_summary(args, data: ChatCollection) -> None:
     """Write a summary JSON file for the collection."""
+    try:
+        summary_path = SecurePathValidator.validate_path(args.summary)
+    except (ValueError, PathTraversalError) as e:
+        logger.error("Invalid summary path: %s", e)
+        return
+
     summary = {"total_chats": len(data), "chats": {}}
     for jid, chat in data.items():
         summary["chats"][jid] = {
             "name": chat.name,
             "message_count": len(chat),
         }
-    with open(args.summary, "w") as f:
+    with open(summary_path, "w") as f:
         json.dump(summary, f, indent=2)
 
 

@@ -13,7 +13,7 @@ authors = [
 license = { text = "MIT" }
 keywords = [
     "android", "ios", "parsing", "history", "iphone", "message", "crypt15",
-    "customizable", "whatsapp", "android-backup", "messages", "crypt14", 
+    "customizable", "whatsapp", "android-backup", "messages", "crypt14",
     "crypt12", "whatsapp-chat-exporter", "whatsapp-export", "iphone-backup",
     "whatsapp-database", "whatsapp-database-parser", "whatsapp-conversations"
 ]
@@ -86,10 +86,11 @@ pydantic = ">=2"
 psutil = "*"
 markupsafe = "*"
 aiofiles = "*"
-vobject = "^0.9.9"
-phonenumbers = "^9.0.9"
-pycryptodome = "^3.23.0"
-javaobj-py3 = "^0.4.4"
+vobject = {version = "^0.9.9", optional = true}
+phonenumbers = {version = "^9.0.9", optional = true}
+pycryptodome = {version = "^3.23.0", optional = true}
+javaobj-py3 = {version = "^0.4.4", optional = true}
+iphone_backup_decrypt = {version = "*", optional = true}
 
 [tool.poetry.extras]
 android_backup = ["pycryptodome", "javaobj-py3"]
@@ -117,4 +118,3 @@ mkdocs = "*"
 
 [tool.poetry.group.dev.dependencies]
 pytest-cov = "^6.2.1"
-

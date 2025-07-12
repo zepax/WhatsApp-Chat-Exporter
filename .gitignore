@@ -16,6 +16,9 @@ node_modules/
 venv/
 .venv/
 
+# Development tools and scripts (keep local)
+.dev/
+
 # Configuration files for development tools not in use
 .codex.yaml
 *.codex.*

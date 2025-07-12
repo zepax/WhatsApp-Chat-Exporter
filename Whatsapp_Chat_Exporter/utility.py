@@ -461,6 +461,10 @@ def get_chat_condition(
                     "Only android and ios are supported for argument platform if jid is not None"
                 )
         for index, chat in enumerate(filter):
+            # Security: Validate input to prevent SQL injection
+            if not chat.isnumeric():
+                raise ValueError("Chat filter must contain digits only")
+
             if include:
                 conditions.append(
                     f"{' OR' if index > 0 else ''} {columns[0]} LIKE '%{chat}%'"

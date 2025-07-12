@@ -216,10 +216,27 @@ files = [
 ]
 
 [[package]]
+name = "iphone-backup-decrypt"
+version = "0.9.0"
+description = "Decrypt and extract files from an iOS13+ encrypted local backup."
+optional = true
+python-versions = ">=3.8"
+files = [
+    {file = "iphone_backup_decrypt-0.9.0-py3-none-any.whl", hash = "sha256:55b5adfafac757f58aa6444b83a4cc2c20cdd699c6ff1d2f4b549936a5dad92c"},
+    {file = "iphone_backup_decrypt-0.9.0.tar.gz", hash = "sha256:13b18fef3c8e3af627914f8c1a429bbc5555dfb0505239ba49efe99984cc0c96"},
+]
+
+[package.dependencies]
+pycryptodome = ">=3.20.0"
+
+[package.extras]
+fastpbkdf2 = ["fastpbkdf2 (>=0.2)"]
+
+[[package]]
 name = "javaobj-py3"
 version = "0.4.4"
 description = "Module for serializing and de-serializing Java objects."
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "javaobj-py3-0.4.4.tar.gz", hash = "sha256:e4e3257ef2cf81a3339787a4d5cf924e54c91f095a723f6d2584dae61d4396ed"},
@@ -510,7 +527,7 @@ files = [
 name = "phonenumbers"
 version = "9.0.9"
 description = "Python version of Google's common library for parsing, formatting, storing and validating international phone numbers."
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "phonenumbers-9.0.9-py2.py3-none-any.whl", hash = "sha256:13b91aa153f87675902829b38a556bad54824f9c121b89588bbb5fa8550d97ef"},
@@ -575,7 +592,7 @@ test = ["pytest", "pytest-xdist", "setuptools"]
 name = "pycryptodome"
 version = "3.23.0"
 description = "Cryptographic library for Python"
-optional = false
+optional = true
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 files = [
     {file = "pycryptodome-3.23.0-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:a176b79c49af27d7f6c12e4b178b0824626f40a7b9fed08f712291b6d54bf566"},
@@ -843,7 +860,7 @@ six = ">=1.5"
 name = "pytz"
 version = "2025.2"
 description = "World timezone definitions, modern and historical"
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "pytz-2025.2-py2.py3-none-any.whl", hash = "sha256:5ddf76296dd8c44c26eb8f4b6f35488f3ccbf6fbbd7adee0b7262d43f0ec2f00"},
@@ -1039,7 +1056,7 @@ typing-extensions = ">=4.12.0"
 name = "vobject"
 version = "0.9.9"
 description = "A full-featured Python package for parsing and creating iCalendar and vCard files"
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "vobject-0.9.9-py2.py3-none-any.whl", hash = "sha256:0fbdb982065cf4d1843a5d5950c88510041c6de026bda49c3502721de1c6ac3d"},
@@ -1112,10 +1129,10 @@ crypt12 = ["pycryptodome"]
 crypt14 = ["pycryptodome"]
 crypt15 = ["javaobj-py3", "pycryptodome"]
 everything = ["javaobj-py3", "phonenumbers", "pycryptodome", "vobject"]
-ios-encrypted = []
+ios-encrypted = ["iphone_backup_decrypt"]
 vcards = ["javaobj-py3", "phonenumbers", "pycryptodome", "vobject"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11"
-content-hash = "2f4eb34bf601540321d382336c03117bbac7ad046a9bff0cc155fe39ac6e2ce1"
+content-hash = "fc6d63ef7dbc06de009eefe17d8c56c6d2ee3284a84971055693c79d7c5e71e3"

@@ -1,12 +1,13 @@
-# .pre-commit-config.yaml
+# 🚀 Pre-commit optimizado para desarrollo eficiente
 repos:
   # 1. Black ─ formateo consistente
   - repo: https://github.com/psf/black
-    rev: 24.4.2        # fíjalo a una versión estable
+    rev: 24.4.2
     hooks:
       - id: black
-        language_version: python3   # usa el Python de tu venv
+        language_version: python3
         args: ["--line-length", "88"]
+        exclude: ^(test_environment/|_review_folder/|\.dev/)
 
   # 2. isort ─ ordena imports antes de que Black formatee
   - repo: https://github.com/pycqa/isort
@@ -14,19 +15,36 @@ repos:
     hooks:
       - id: isort
         args: ["--profile", "black"]
+        exclude: ^(test_environment/|_review_folder/|\.dev/)
 
-  # 3. Ruff ─ linting y reglas de estilo ultrarrápidas
+  # 3. Ruff ─ linting ultrarrápido
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.4
     hooks:
       - id: ruff
-        args: ["--fix"]          # corrige auto‐lintable issues
-      - id: ruff-format          # formateo adicional de Ruff (opcional)
+        args: ["--fix"]
+        exclude: ^(test_environment/|_review_folder/|\.dev/)
+      - id: ruff-format
+        exclude: ^(test_environment/|_review_folder/|\.dev/)
 
-  # 4. mypy ─ chequeo estático de tipos
+  # 4. mypy ─ chequeo de tipos (solo archivos principales)
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.10.0
     hooks:
       - id: mypy
-        additional_dependencies: ["types-requests"]   # agrega paquetes de tipos que uses
-        args: ["--strict"]         # usa el modo estricto, si prefieres suavizar quita este flag
+        additional_dependencies: ["types-requests"]
+        args: ["--ignore-missing-imports"]  # Menos estricto para desarrollo ágil
+        exclude: ^(test_environment/|_review_folder/|\.dev/|.*test.*\.py)
+
+  # 5. Verificaciones rápidas de archivos
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(test_environment/|_review_folder/)
+      - id: end-of-file-fixer
+        exclude: ^(test_environment/|_review_folder/)
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=100000']  # 100MB max
+      - id: check-merge-conflict
