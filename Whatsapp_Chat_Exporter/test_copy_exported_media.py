@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from Whatsapp_Chat_Exporter.__main__ import copy_exported_media
 from Whatsapp_Chat_Exporter.data_model import ChatCollection, ChatStore, Message
@@ -20,7 +21,7 @@ def _create_msg(path: str) -> Message:
     return msg
 
 
-def test_copy_exported_media_traversal(tmp_path):
+def test_copy_exported_media_traversal(tmp_path, monkeypatch):
     src = tmp_path / "src"
     src.mkdir()
     good = src / "good.txt"
@@ -46,11 +47,26 @@ def test_copy_exported_media_traversal(tmp_path):
     out_dir = tmp_path / "out"
     out_dir.mkdir()
 
-    copy_exported_media(str(chat_file), collection, str(out_dir))
+    captured = {}
+
+    def fake_copy_parallel(pairs, workers=4):
+        captured["pairs"] = pairs
+        captured["workers"] = workers
+        for s, d in pairs:
+            shutil.copy2(s, d)
+
+    monkeypatch.setattr(
+        "Whatsapp_Chat_Exporter.__main__.copy_parallel",
+        fake_copy_parallel,
+    )
+
+    copy_exported_media(str(chat_file), collection, str(out_dir), workers=2)
 
     copied = out_dir / "media" / "good.txt"
     assert copied.is_file()
     assert chat.get_message("1").data == os.path.relpath(copied, out_dir)
+    assert captured["pairs"] == [(str(good), str(copied))]
+    assert captured["workers"] == 2
 
     assert not (out_dir / "media" / "outside.txt").exists()
     assert not (out_dir / "media" / "abs.txt").exists()

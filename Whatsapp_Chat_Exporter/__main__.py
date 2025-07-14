@@ -33,6 +33,7 @@ from Whatsapp_Chat_Exporter.utility import (
     DbType,
     bytes_to_readable,
     check_update,
+    copy_parallel,
     extract_archive,
     import_from_json,
     readable_to_bytes,
@@ -521,6 +522,13 @@ def setup_argument_parser() -> ArgumentParser:
         help="Specify the maximum number of worker for bruteforce decryption.",
     )
     misc_group.add_argument(
+        "--copy-workers",
+        dest="copy_workers",
+        default=4,
+        type=int,
+        help="Number of worker threads for copying exported media files.",
+    )
+    misc_group.add_argument(
         "-v",
         "--verbose",
         dest="verbose",
@@ -619,6 +627,9 @@ def validate_args(parser: ArgumentParser, args) -> None:
     check_exists(args.wa, "Contact database")
     check_exists(args.wab, "Contact backup")
     check_exists(args.call_db_ios, "Call database")
+
+    if args.copy_workers < 1:
+        parser.error("--copy-workers must be at least 1")
 
     if (
         args.backup
@@ -883,11 +894,6 @@ def process_contacts(args, data: ChatCollection, contact_store=None) -> None:
     # Skip contact processing if using same database file as messages to avoid locks
     if os.path.isfile(contact_db) and contact_db != args.db:
         # Use original handlers to avoid database lock issues
-        filter_chat = (
-            getattr(args, "filter_chat_include", []),
-            getattr(args, "filter_chat_exclude", []),
-        )
-
         if args.android:
             import sqlite3
 
@@ -1231,7 +1237,9 @@ def export_summary(args, data: ChatCollection) -> None:
         json.dump(summary, f, indent=2)
 
 
-def copy_exported_media(chat_file: str, data: ChatCollection, output_dir: str) -> None:
+def copy_exported_media(
+    chat_file: str, data: ChatCollection, output_dir: str, workers: int = 4
+) -> None:
     """Copy media referenced in an exported chat.
 
     Args:
@@ -1247,6 +1255,7 @@ def copy_exported_media(chat_file: str, data: ChatCollection, output_dir: str) -
     media_dir = os.path.join(output_dir, "media")
     os.makedirs(media_dir, exist_ok=True)
 
+    file_pairs: list[tuple[str, str]] = []
     for msg in chat.values():
         if msg.media and isinstance(msg.data, str) and os.path.isfile(msg.data):
             try:
@@ -1266,8 +1275,11 @@ def copy_exported_media(chat_file: str, data: ChatCollection, output_dir: str) -
                 continue
 
             os.makedirs(os.path.dirname(dst), exist_ok=True)
-            shutil.copy2(msg.data, dst)
+            file_pairs.append((msg.data, dst))
             msg.data = os.path.relpath(dst, output_dir)
+
+    if file_pairs:
+        copy_parallel(file_pairs, workers=workers)
 
     if chat.media_base == "":
         chat.media_base = "media/"
@@ -1282,7 +1294,12 @@ def process_exported_chat(args, data: ChatCollection) -> None:
         args.prompt_user,
     )
 
-    copy_exported_media(args.exported, data, args.output)
+    copy_exported_media(
+        args.exported,
+        data,
+        args.output,
+        workers=args.copy_workers,
+    )
 
     if not args.no_html:
         # Detect platform and use appropriate HTML generator
