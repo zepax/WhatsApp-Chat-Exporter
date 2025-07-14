@@ -3,6 +3,7 @@ Tests for database optimization utilities.
 """
 
 import sqlite3
+import threading
 
 import pytest
 
@@ -316,6 +317,36 @@ def test_performance_monitoring_integration(tmp_path):
 
         assert analysis["execution_time_seconds"] >= 0
         assert analysis["row_count"] == 1  # COUNT returns 1 row
+
+
+def test_concurrent_reads_no_lock(tmp_path):
+    """Ensure concurrent reads do not raise 'database is locked'."""
+
+    db_path = tmp_path / "concurrent.db"
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, val TEXT)")
+        for i in range(20):
+            conn.execute("INSERT INTO test (val) VALUES (?)", (f"v{i}",))
+        conn.commit()
+
+    errors = []
+
+    def read_db():
+        try:
+            for _ in range(5):
+                with optimized_db_connection(db_path) as conn:
+                    conn.execute("SELECT COUNT(*) FROM test").fetchone()
+        except Exception as exc:  # pragma: no cover - capture unexpected
+            errors.append(exc)
+
+    threads = [threading.Thread(target=read_db) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert not errors
 
 
 if __name__ == "__main__":

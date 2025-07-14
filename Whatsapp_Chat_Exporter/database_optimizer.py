@@ -486,17 +486,19 @@ def close_all_pools() -> None:
 
 @contextmanager
 def optimized_db_connection(database_path: Union[str, Path]):
-    """
-    Context manager for getting an optimized database connection.
+    """Provide an optimized SQLite connection with WAL mode enabled."""
 
-    Args:
-        database_path: Path to the SQLite database
-
-    Yields:
-        sqlite3.Connection: Optimized database connection
-    """
     pool = get_connection_pool(database_path)
     with pool.get_connection() as conn:
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.OperationalError as e:
+            if "database is locked" in str(e).lower():
+                logger.warning(
+                    "WAL mode could not be enabled due to a lock on %s", database_path
+                )
+            else:
+                raise
         yield conn
 
 
