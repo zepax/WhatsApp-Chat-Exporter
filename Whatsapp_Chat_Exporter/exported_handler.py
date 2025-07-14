@@ -7,6 +7,27 @@ from mimetypes import MimeTypes
 
 from rich.progress import track
 
+
+def _find_media_file(base_dir: str, filename: str) -> str | None:
+    """Search recursively for a media file within ``base_dir``.
+
+    Args:
+        base_dir: Root directory of the exported chat.
+        filename: Name of the file to locate.
+
+    Returns:
+        Absolute path to the file if found, otherwise ``None``.
+    """
+    abs_base = os.path.abspath(base_dir)
+    for root, _, files in os.walk(abs_base):
+        if filename in files:
+            candidate = os.path.join(root, filename)
+            candidate_abs = os.path.abspath(candidate)
+            if candidate_abs.startswith(abs_base + os.sep):
+                return candidate_abs
+    return None
+
+
 from Whatsapp_Chat_Exporter.data_model import ChatStore, Message
 from Whatsapp_Chat_Exporter.utility import Device
 
@@ -185,20 +206,25 @@ def process_attached_file(msg, message, file_path):
     base_dir = os.path.abspath(os.path.dirname(file_path))
     attached_file_path = os.path.normpath(os.path.join(base_dir, file_name))
 
-    if not attached_file_path.startswith(base_dir + os.sep):
-        msg.data = "The media is missing"
-        msg.mime = "media"
-        msg.meta = True
-        return
-
-    if os.path.isfile(attached_file_path):
+    if attached_file_path.startswith(base_dir + os.sep) and os.path.isfile(
+        attached_file_path
+    ):
         msg.data = attached_file_path
         guess = MIME.guess_type(attached_file_path)[0]
         msg.mime = guess if guess is not None else "application/octet-stream"
-    else:
-        msg.data = "The media is missing"
-        msg.mime = "media"
-        msg.meta = True
+        return
+
+    if os.path.basename(file_name) == file_name:
+        found = _find_media_file(base_dir, file_name)
+        if found is not None:
+            msg.data = found
+            guess = MIME.guess_type(found)[0]
+            msg.mime = guess if guess is not None else "application/octet-stream"
+            return
+
+    msg.data = "The media is missing"
+    msg.mime = "media"
+    msg.meta = True
 
 
 def process_message_continuation(line, index, chat):
