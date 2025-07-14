@@ -41,5 +41,5 @@ def test_ios_media_relative_path(tmp_path):
     mime = MimeTypes()
     ios_handler.process_media_item(content, data, str(media_dir), mime, False)
 
-    expected = os.path.relpath(str(file_path), file_path.anchor)
+    expected = os.path.relpath(str(file_path), str(media_dir))
     assert chat.get_message("1").data == expected
