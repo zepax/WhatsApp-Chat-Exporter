@@ -47,6 +47,7 @@ from .logging_config import (
     setup_logging,
 )
 from .optimized_handlers import cleanup_optimizations
+from .database_optimizer import optimized_db_connection
 
 # Import security and logging utilities
 from .security_utils import PathTraversalError, SecurePathValidator
@@ -908,9 +909,7 @@ def process_messages(args, data: ChatCollection) -> None:
     msg_db = (
         args.db
         if args.db
-        else "msgstore.db"
-        if args.android
-        else args.identifiers.MESSAGE
+        else "msgstore.db" if args.android else args.identifiers.MESSAGE
     )
 
     if not os.path.isfile(msg_db):
@@ -927,9 +926,7 @@ def process_messages(args, data: ChatCollection) -> None:
     )
 
     if args.android:
-        import sqlite3
-
-        with sqlite3.connect(msg_db) as cdb:
+        with optimized_db_connection(msg_db) as cdb:
             cdb.row_factory = sqlite3.Row
             android_handler.messages(
                 cdb,
@@ -954,9 +951,7 @@ def process_messages(args, data: ChatCollection) -> None:
             )
             android_handler.calls(cdb, data, args.timezone_offset, filter_chat)
     else:
-        import sqlite3
-
-        with sqlite3.connect(msg_db) as cdb:
+        with optimized_db_connection(msg_db) as cdb:
             cdb.row_factory = sqlite3.Row
             ios_handler.messages(
                 cdb,
