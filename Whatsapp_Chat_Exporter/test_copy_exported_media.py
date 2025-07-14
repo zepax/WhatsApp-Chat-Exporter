@@ -3,6 +3,7 @@ import os
 from Whatsapp_Chat_Exporter.__main__ import copy_exported_media
 from Whatsapp_Chat_Exporter.data_model import ChatCollection, ChatStore, Message
 from Whatsapp_Chat_Exporter.utility import Device
+from Whatsapp_Chat_Exporter import exported_handler
 
 
 def _create_msg(path: str) -> Message:
@@ -55,3 +56,24 @@ def test_copy_exported_media_traversal(tmp_path):
     assert not (out_dir / "media" / "abs.txt").exists()
     assert chat.get_message("2").data == str(outside)
     assert chat.get_message("3").data == str(abs_file)
+
+
+def test_find_media_file_cache(tmp_path, monkeypatch):
+    base = tmp_path / "chat"
+    media = base / "Media"
+    media.mkdir(parents=True)
+    file_path = media / "pic.jpg"
+    file_path.write_text("data")
+
+    exported_handler._build_media_cache(str(base))
+
+    def fail_walk(_):
+        raise AssertionError("os.walk should not be called")
+
+    monkeypatch.setattr(exported_handler.os, "walk", fail_walk)
+
+    found = exported_handler._find_media_file(str(base), "pic.jpg")
+    missing = exported_handler._find_media_file(str(base), "nope.jpg")
+
+    assert found == str(file_path)
+    assert missing is None

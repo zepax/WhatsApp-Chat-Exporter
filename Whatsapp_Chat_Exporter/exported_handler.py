@@ -6,6 +6,28 @@ from datetime import datetime
 from mimetypes import MimeTypes
 
 from rich.progress import track
+from Whatsapp_Chat_Exporter.data_model import ChatStore, Message
+from Whatsapp_Chat_Exporter.utility import Device
+
+# Cache mapping base directory to a filename->path map
+_MEDIA_CACHE: dict[str, dict[str, str]] = {}
+
+
+def _build_media_cache(base_dir: str) -> None:
+    """Populate the media cache for ``base_dir`` once."""
+    abs_base = os.path.abspath(base_dir)
+    if abs_base in _MEDIA_CACHE:
+        return
+
+    mapping: dict[str, str] = {}
+    for root, _, files in os.walk(abs_base):
+        for file in files:
+            candidate = os.path.join(root, file)
+            candidate_abs = os.path.abspath(candidate)
+            if candidate_abs.startswith(abs_base + os.sep):
+                mapping[file] = candidate_abs
+
+    _MEDIA_CACHE[abs_base] = mapping
 
 
 def _find_media_file(base_dir: str, filename: str) -> str | None:
@@ -19,17 +41,22 @@ def _find_media_file(base_dir: str, filename: str) -> str | None:
         Absolute path to the file if found, otherwise ``None``.
     """
     abs_base = os.path.abspath(base_dir)
+    cache = _MEDIA_CACHE.get(abs_base)
+    if cache is not None:
+        path = cache.get(filename)
+        if path is not None and os.path.isfile(path):
+            return path
+        return None
+
     for root, _, files in os.walk(abs_base):
         if filename in files:
             candidate = os.path.join(root, filename)
             candidate_abs = os.path.abspath(candidate)
             if candidate_abs.startswith(abs_base + os.sep):
+                _MEDIA_CACHE[abs_base] = {filename: candidate_abs}
                 return candidate_abs
     return None
 
-
-from Whatsapp_Chat_Exporter.data_model import ChatStore, Message
-from Whatsapp_Chat_Exporter.utility import Device
 
 # Reuse a single MimeTypes instance to avoid repeated initialisation
 MIME = MimeTypes()
@@ -50,6 +77,7 @@ def messages(path, data, assume_first_as_me=False, prompt_user=False):
     """
     # Create a new chat in the data container
     chat = data.add_chat("ExportedChat", ChatStore(Device.EXPORTED))
+    _build_media_cache(os.path.dirname(os.path.abspath(path)))
     you = ""  # Will store the username of the current user
     user_identification_done = (
         False  # Flag to track if user identification has been done
