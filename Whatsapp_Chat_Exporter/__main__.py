@@ -46,7 +46,7 @@ from .logging_config import (
     log_performance,
     setup_logging,
 )
-from .optimized_handlers import cleanup_optimizations, get_optimized_handler
+from .optimized_handlers import cleanup_optimizations
 
 # Import security and logging utilities
 from .security_utils import PathTraversalError, SecurePathValidator
@@ -879,25 +879,28 @@ def process_contacts(args, data: ChatCollection, contact_store=None) -> None:
         )
         contact_db = args.db
 
-    if os.path.isfile(contact_db):
-        # Use optimized handlers for better performance
-        platform = "android" if args.android else "ios"
-        optimized_handler = get_optimized_handler(platform)
-
-        # Set up database optimizations
-        optimized_handler.setup_optimizations(contact_db)
-
+    # Skip contact processing if using same database file as messages to avoid locks
+    if os.path.isfile(contact_db) and contact_db != args.db:
+        # Use original handlers to avoid database lock issues
         filter_chat = (
             getattr(args, "filter_chat_include", []),
             getattr(args, "filter_chat_exclude", []),
         )
 
         if args.android:
-            optimized_handler.contacts(contact_db, data, args.timezone_offset)
+            import sqlite3
+
+            with sqlite3.connect(contact_db) as cdb:
+                cdb.row_factory = sqlite3.Row
+                android_handler.contacts(cdb, data, args.timezone_offset)
         else:
-            optimized_handler.contacts(
-                contact_db, data, args.timezone_offset, filter_chat
-            )
+            import sqlite3
+
+            with sqlite3.connect(contact_db) as cdb:
+                cdb.row_factory = sqlite3.Row
+                ios_handler.contacts(cdb, data)
+    else:
+        logger.info("Skipping contact processing to avoid database conflicts")
 
 
 def process_messages(args, data: ChatCollection) -> None:
@@ -918,44 +921,62 @@ def process_messages(args, data: ChatCollection) -> None:
 
     filter_chat = (args.filter_chat_include, args.filter_chat_exclude)
 
-    # Use optimized handlers for better performance
-    platform = "android" if args.android else "ios"
-    optimized_handler = get_optimized_handler(platform)
-
-    # Set up database optimizations
-    optimized_handler.setup_optimizations(msg_db)
-
-    logger.info(f"Processing messages with optimized {platform} handler")
-
-    # Process messages with optimized handler
-    optimized_handler.messages(
-        msg_db,
-        data,
-        args.media,
-        args.timezone_offset,
-        args.filter_date,
-        filter_chat,
-        args.filter_empty,
+    # Use original handlers to avoid database lock issues
+    logger.info(
+        f"Processing messages with original {'android' if args.android else 'ios'} handler"
     )
 
-    # Process media with optimizations
-    optimized_handler.media(
-        msg_db,
-        data,
-        args.media,
-        args.filter_date,
-        filter_chat,
-        args.filter_empty,
-        args.separate_media,
-    )
+    if args.android:
+        import sqlite3
 
-    # Process vcards with optimizations
-    optimized_handler.vcard(
-        msg_db, data, args.media, args.filter_date, filter_chat, args.filter_empty
-    )
+        with sqlite3.connect(msg_db) as cdb:
+            cdb.row_factory = sqlite3.Row
+            android_handler.messages(
+                cdb,
+                data,
+                args.media,
+                args.timezone_offset,
+                args.filter_date,
+                filter_chat,
+                args.filter_empty,
+            )
+            android_handler.media(
+                cdb,
+                data,
+                args.media,
+                args.filter_date,
+                filter_chat,
+                args.filter_empty,
+                args.separate_media,
+            )
+            android_handler.vcard(
+                cdb, data, args.media, args.filter_date, filter_chat, args.filter_empty
+            )
+            android_handler.calls(cdb, data, args.timezone_offset, filter_chat)
+    else:
+        import sqlite3
 
-    # Process calls with optimizations
-    optimized_handler.calls(msg_db, data, args.timezone_offset, filter_chat)
+        with sqlite3.connect(msg_db) as cdb:
+            cdb.row_factory = sqlite3.Row
+            ios_handler.messages(
+                cdb,
+                data,
+                args.media,
+                args.timezone_offset,
+                args.filter_date,
+                filter_chat,
+                args.filter_empty,
+            )
+            ios_handler.media(
+                cdb,
+                data,
+                args.media,
+                args.filter_date,
+                filter_chat,
+                args.separate_media,
+            )
+            ios_handler.vcard(cdb, data, args.media, args.filter_date, filter_chat)
+            ios_handler.calls(cdb, data, args.timezone_offset, filter_chat)
 
 
 def process_calls(args, db, data: ChatCollection, filter_chat) -> None:

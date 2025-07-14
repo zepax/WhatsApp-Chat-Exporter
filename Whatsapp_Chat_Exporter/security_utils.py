@@ -12,9 +12,23 @@ logger = logging.getLogger(__name__)
 
 
 class PathTraversalError(Exception):
-    """Exception raised for path traversal attempts."""
+    """Exception raised for path traversal attempts.
 
-    pass
+    This exception is raised when a file path is detected to be attempting
+    to access files outside of the allowed directory structure, which could
+    indicate a security vulnerability or attack.
+
+    Common scenarios that trigger this exception:
+    - Paths containing ".." (parent directory) components
+    - Paths that resolve outside the specified base directory
+    - Symlink attacks that point to unauthorized locations
+    """
+
+    def __init__(
+        self, message: str = "Path traversal attempt detected", path: str = None
+    ):
+        super().__init__(message)
+        self.path = path
 
 
 class SecurePathValidator:

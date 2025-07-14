@@ -20,7 +20,7 @@
 # THE SOFTWARE.                                                                 #
 #################################################################################
 
-import codecs
+# codecs import removed - using direct bytes.decode() for UTF-8
 import struct
 from datetime import datetime, timedelta
 from plistlib import FMT_BINARY, dumps
@@ -153,9 +153,8 @@ class BPListReader(object):
             elif obj_info == 0x09:  # bool   0000 1001           // true
                 return True
             elif obj_info == 0x0F:  # fill   0000 1111           // fill byte
-                raise Exception(
-                    "0x0F Not Implemented"
-                )  # this is really pad byte, FIXME
+                # Handle pad byte - skip and return None as this is padding
+                return None
             else:
                 raise Exception(
                     "unpack item type "
@@ -192,9 +191,11 @@ class BPListReader(object):
             obj_count, objref = self.__resolveIntSize(obj_info, offset)
             return self.data[objref : objref + obj_count * 2].decode("utf-16be")
         elif obj_type == 0x80:  #    uid     1000 nnnn   ...     // nnnn+1 is # of bytes
-            # FIXME: Accept as a string for now
-            obj_count, objref = self.__resolveIntSize(obj_info, offset)
-            return self.data[objref : objref + obj_count]
+            # Handle UID data type - return as integer for proper handling
+            obj_count = obj_info + 1  # nnnn+1 is number of bytes
+            uid_bytes = self.data[offset + 1 : offset + 1 + obj_count]
+            # Convert bytes to integer (big-endian)
+            return int.from_bytes(uid_bytes, byteorder="big")
         elif (
             obj_type == 0xA0
         ):  #    array   1010 nnnn   [int]   objref* // nnnn is count, unless '1111', then int count follows
@@ -215,8 +216,21 @@ class BPListReader(object):
         elif (
             obj_type == 0xC0
         ):  #   set      1100 nnnn   [int]   objref* // nnnn is count, unless '1111', then int count follows
-            # XXX: not serializable via apple implementation
-            raise Exception("0xC0 Not Implemented")  # FIXME: implement
+            # Implement set data type - similar to array but returns a set
+            obj_count, objref = self.__resolveIntSize(obj_info, offset)
+            arr = []
+            for i in range(obj_count):
+                arr.append(
+                    self.__unpackIntStruct(
+                        self.object_ref_size,
+                        self.data[
+                            objref + i * self.object_ref_size : objref
+                            + i * self.object_ref_size
+                            + self.object_ref_size
+                        ],
+                    )
+                )
+            return set(arr)  # Return as set instead of list
         elif (
             obj_type == 0xD0
         ):  #   dict     1101 nnnn   [int]   keyref* objref* // nnnn is count, unless '1111', then int count follows
@@ -276,7 +290,8 @@ class BPListReader(object):
                     if isinstance(key_resolved, str):
                         rk = key_resolved
                     else:
-                        rk = codecs.decode(key_resolved, "utf-8")
+                        # Decode bytes directly to UTF-8 string
+                        rk = key_resolved.decode("utf-8")
                     rv = self.__resolveObject(v)
                     newDic[rk] = rv
                 self.resolved[idx] = newDic

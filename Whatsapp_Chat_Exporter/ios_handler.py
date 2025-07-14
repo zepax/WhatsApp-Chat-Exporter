@@ -50,10 +50,20 @@ def _extract_contact_names_from_chats(db, data):
         WHERE ZPARTNERNAME IS NOT NULL AND ZPARTNERNAME != ''
     """
 
-    c.execute(contacts_query)
+    import sqlite3
 
-    # Process each contact
-    content = c.fetchone()
+    try:
+        c.execute(contacts_query)
+        # Process each contact
+        content = c.fetchone()
+    except sqlite3.OperationalError as e:
+        if "database is locked" in str(e):
+            logger.warning(
+                "Database is locked during contact extraction query, skipping"
+            )
+            return
+        else:
+            raise
     contact_count = 0
     while content is not None:
         contact_id = content["ZCONTACTJID"]
@@ -80,18 +90,52 @@ def _extract_contact_names_from_chats(db, data):
 
 def _check_table_exists(db, table_name):
     """Check if a table exists in the database."""
+    import sqlite3
+
     cursor = db.cursor()
-    cursor.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,)
-    )
-    return cursor.fetchone() is not None
+    try:
+        cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            (table_name,),
+        )
+        return cursor.fetchone() is not None
+    except sqlite3.OperationalError as e:
+        if "database is locked" in str(e):
+            logger.warning(f"Database is locked, assuming table {table_name} exists")
+            # Return True for common iOS WhatsApp tables as fallback
+            common_tables = [
+                "ZWAMESSAGE",
+                "ZWACHATSESSION",
+                "ZWAPROFILEPUSHNAME",
+                "ZWAGROUPMEMBER",
+                "ZWAMEDIAITEM",
+            ]
+            return table_name in common_tables
+        else:
+            raise
 
 
 def _get_available_tables(db):
     """Get a list of all available tables in the database."""
+    import sqlite3
+
     cursor = db.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-    return [row[0] for row in cursor.fetchall()]
+    try:
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        return [row[0] for row in cursor.fetchall()]
+    except sqlite3.OperationalError as e:
+        if "database is locked" in str(e):
+            logger.warning("Database is locked, using default table list for iOS")
+            # Return common iOS WhatsApp tables as fallback
+            return [
+                "ZWAMESSAGE",
+                "ZWACHATSESSION",
+                "ZWAPROFILEPUSHNAME",
+                "ZWAGROUPMEMBER",
+                "ZWAMEDIAITEM",
+            ]
+        else:
+            raise
 
 
 def _get_table_columns(db, table_name):
@@ -272,8 +316,19 @@ def messages(
                 {chat_filter_exclude}
         """
 
-    c.execute(message_count_query)
-    total_row_number = c.fetchone()[0]
+    import sqlite3
+
+    try:
+        c.execute(message_count_query)
+        total_row_number = c.fetchone()[0]
+    except sqlite3.OperationalError as e:
+        if "database is locked" in str(e):
+            logger.warning(
+                "Database is locked during message count query, using default count"
+            )
+            total_row_number = 1000  # Use a reasonable default
+        else:
+            raise
 
     # Fetch messages - use simplified query if tables missing
     if has_chat_session:
@@ -298,7 +353,7 @@ def messages(
                 INNER JOIN ZWACHATSESSION
                     ON ZWAMESSAGE.ZCHATSESSION = ZWACHATSESSION.Z_PK
                 {"LEFT JOIN ZWAPROFILEPUSHNAME ON ZWACHATSESSION.ZCONTACTJID = ZWAPROFILEPUSHNAME.ZJID" if has_profile_pushname else ""}
-            WHERE 1=1   
+            WHERE 1=1
                 {date_filter}
             {chat_filter_include}
             {chat_filter_exclude}
@@ -321,17 +376,25 @@ def messages(
                 ZPARTNERNAME,
                 ZPUSHNAME
             FROM ZWAMESSAGE
-            WHERE 1=1   
+            WHERE 1=1
                 {date_filter}
                 {chat_filter_include}
                 {chat_filter_exclude}
             ORDER BY ZMESSAGEDATE ASC
         """
 
-    c.execute(messages_query)
-
-    # Process each message
-    content = c.fetchone()
+    try:
+        c.execute(messages_query)
+        # Process each message
+        content = c.fetchone()
+    except sqlite3.OperationalError as e:
+        if "database is locked" in str(e):
+            logger.warning(
+                "Database is locked during messages query, skipping message processing"
+            )
+            return
+        else:
+            raise
     for _ in track(range(total_row_number), description="Processing messages"):
         if content is None:
             break
@@ -589,8 +652,19 @@ def media(db, data, media_folder, filter_date, filter_chat, separate_media=False
                 {chat_filter_exclude}
         """
 
-    c.execute(media_count_query)
-    total_row_number = c.fetchone()[0]
+    import sqlite3
+
+    try:
+        c.execute(media_count_query)
+        total_row_number = c.fetchone()[0]
+    except sqlite3.OperationalError as e:
+        if "database is locked" in str(e):
+            logger.warning(
+                "Database is locked during media count query, skipping media processing"
+            )
+            return
+        else:
+            raise
 
     if total_row_number == 0:
         logger.info("No media items found")
@@ -642,10 +716,22 @@ def media(db, data, media_folder, filter_date, filter_chat, separate_media=False
     # Process each media item
     mime = MimeTypes()
     content = c.fetchone()
+    processed_count = 0
     for _ in track(range(total_row_number), description="Processing media"):
         if content is None:
             break
-        process_media_item(content, data, media_folder, mime, separate_media)
+        try:
+            # Log progress every 10000 items
+            if processed_count % 10000 == 0:
+                logger.info(
+                    f"Processing media item {processed_count}/{total_row_number}"
+                )
+
+            process_media_item(content, data, media_folder, mime, separate_media)
+            processed_count += 1
+        except Exception as e:
+            logger.warning(f"Error processing media item {processed_count}: {e}")
+            processed_count += 1
         content = c.fetchone()
 
 
@@ -669,15 +755,52 @@ def process_media_item(
         return
 
     if not contact_jid or not message_id:
-        logger.debug("Missing required fields in media content")
+        # Only log this as debug if we have some content, otherwise skip silently
+        if content and any(content.values() if hasattr(content, "values") else []):
+            logger.debug(
+                f"Missing required fields: contact_jid={contact_jid}, message_id={message_id}"
+            )
         return
 
     if not media_path:
-        logger.debug("No local media path found")
+        # Skip logging for missing media path as this is common for messages without media
         return
 
-    base_dir = os.path.abspath(os.path.join(media_folder, "Message"))
-    file_path = os.path.normpath(os.path.join(base_dir, media_path))
+    # iOS media paths - try multiple search locations
+    base_dir = os.path.abspath(media_folder)
+    file_path = None
+
+    # Define search paths in order of preference
+    search_paths = [
+        # Direct path in media folder
+        os.path.join(base_dir, media_path),
+        # With Message subdirectory (legacy support)
+        os.path.join(base_dir, "Message", media_path),
+        # Try with WhatsApp subdirectory
+        os.path.join(base_dir, "WhatsApp", media_path),
+        # Try with Media subdirectory
+        os.path.join(base_dir, "Media", media_path),
+        # Try direct path from media_path if it's absolute-ish
+        media_path if os.path.isabs(media_path) else None,
+        # Strip leading slash and try again
+        (
+            os.path.join(base_dir, media_path.lstrip("/\\"))
+            if media_path.startswith(("/", "\\"))
+            else None
+        ),
+    ]
+
+    # Filter out None values and find first existing file
+    for search_path in filter(None, search_paths):
+        normalized_path = os.path.normpath(search_path)
+        if os.path.isfile(normalized_path):
+            file_path = normalized_path
+            # Update base_dir to match the found path's parent
+            if normalized_path.startswith(base_dir):
+                base_dir = os.path.dirname(
+                    normalized_path.replace(media_path, "").rstrip("/\\")
+                )
+            break
 
     # Validate chat and message exist
     current_chat = data.get_chat(contact_jid)
@@ -695,43 +818,59 @@ def process_media_item(
     if current_chat.media_base == "":
         current_chat.media_base = media_folder + "/"
 
-    if not file_path.startswith(base_dir + os.sep):
+    # Check if file was found and validate security
+    if not file_path:
         message.data = "The media is missing"
         message.mime = "media"
         message.meta = True
         return
 
-    if os.path.isfile(file_path):
-        message.data = os.path.relpath(file_path, Path(file_path).anchor)
-
-        # Set MIME type
-        if content["ZVCARDSTRING"] is None:
-            guess = mime.guess_type(file_path)[0]
-            message.mime = guess if guess is not None else "application/octet-stream"
-        else:
-            message.mime = content["ZVCARDSTRING"]
-
-        # Handle separate media option
-        if separate_media:
-            if not current_chat.slug:
-                current_chat.slug = slugify(
-                    current_chat.name
-                    or message.sender
-                    or content["ZCONTACTJID"].split("@")[0],
-                    True,
-                )
-            chat_display_name = current_chat.slug
-            current_filename = os.path.basename(file_path)
-            new_folder = os.path.join(media_folder, "separated", chat_display_name)
-            Path(new_folder).mkdir(parents=True, exist_ok=True)
-            new_path = os.path.join(new_folder, current_filename)
-            shutil.copy2(file_path, new_path)
-            message.data = os.path.relpath(new_path, Path(new_path).anchor)
-    else:
-        # Handle missing media
+    # Validate path security only if file was found
+    if not file_path.startswith(base_dir + os.sep):
+        logger.warning(f"Media file outside base directory: {file_path}")
         message.data = "The media is missing"
         message.mime = "media"
         message.meta = True
+        return
+
+    # Process the found file (we already checked it exists above)
+    try:
+        # Use a more efficient relative path calculation
+        if file_path.startswith(media_folder):
+            message.data = os.path.relpath(file_path, media_folder)
+        else:
+            message.data = os.path.relpath(file_path, Path(file_path).anchor)
+    except (ValueError, OSError) as e:
+        logger.debug(f"Error calculating relative path for {file_path}: {e}")
+        message.data = file_path
+
+    # Set MIME type
+    if content["ZVCARDSTRING"] is None:
+        try:
+            guess = mime.guess_type(file_path)[0]
+            message.mime = guess if guess is not None else "application/octet-stream"
+        except Exception as e:
+            logger.debug(f"Error guessing MIME type for {file_path}: {e}")
+            message.mime = "application/octet-stream"
+    else:
+        message.mime = content["ZVCARDSTRING"]
+
+    # Handle separate media option
+    if separate_media:
+        if not current_chat.slug:
+            current_chat.slug = slugify(
+                current_chat.name
+                or message.sender
+                or content["ZCONTACTJID"].split("@")[0],
+                True,
+            )
+        chat_display_name = current_chat.slug
+        current_filename = os.path.basename(file_path)
+        new_folder = os.path.join(media_folder, "separated", chat_display_name)
+        Path(new_folder).mkdir(parents=True, exist_ok=True)
+        new_path = os.path.join(new_folder, current_filename)
+        shutil.copy2(file_path, new_path)
+        message.data = os.path.relpath(new_path, Path(new_path).anchor)
 
     # Add caption if available
     if content["ZTITLE"] is not None:
@@ -1080,8 +1219,19 @@ def calls(db, data, timezone_offset, filter_chat):
             {chat_filter_include}
             {chat_filter_exclude}
     """
-    c.execute(call_count_query)
-    total_row_number = c.fetchone()[0]
+    import sqlite3
+
+    try:
+        c.execute(call_count_query)
+        total_row_number = c.fetchone()[0]
+    except sqlite3.OperationalError as e:
+        if "database is locked" in str(e):
+            logger.warning(
+                "Database is locked during call count query, skipping calls processing"
+            )
+            return
+        else:
+            raise
     if total_row_number == 0:
         return
 
@@ -1122,7 +1272,16 @@ def calls(db, data, timezone_offset, filter_chat):
                 {chat_filter_include}
                 {chat_filter_exclude}
         """
-    c.execute(calls_query)
+    try:
+        c.execute(calls_query)
+    except sqlite3.OperationalError as e:
+        if "database is locked" in str(e):
+            logger.warning(
+                "Database is locked during calls query, skipping calls processing"
+            )
+            return
+        else:
+            raise
 
     # Create calls chat
     chat = ChatStore(Device.ANDROID, "WhatsApp Calls")

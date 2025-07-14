@@ -26,33 +26,69 @@ else:
 
 
 class DecryptionError(Exception):
-    """Base class for decryption-related exceptions."""
+    """Base class for decryption-related exceptions.
 
-    pass
+    This exception indicates a general failure in the decryption process.
+    More specific error types should be used when the failure cause is known.
+    """
+
+    def __init__(
+        self, message: str = "Decryption failed", original_error: Exception = None
+    ):
+        super().__init__(message)
+        self.original_error = original_error
 
 
 class InvalidKeyError(DecryptionError):
-    """Raised when the provided key is invalid."""
+    """Raised when the provided key is invalid.
 
-    pass
+    This typically occurs when:
+    - The key file is corrupted or has wrong format
+    - The key doesn't match the encrypted backup
+    - The key size is incorrect (not 158 bytes for crypt12/14)
+    """
+
+    def __init__(self, message: str = "Invalid encryption key provided"):
+        super().__init__(message)
 
 
 class InvalidFileFormatError(DecryptionError):
-    """Raised when the input file format is invalid."""
+    """Raised when the input file format is invalid.
 
-    pass
+    This occurs when:
+    - The backup file is too small or corrupted
+    - The file doesn't match expected crypt12/14/15 format
+    - Required headers or signatures are missing
+    """
+
+    def __init__(self, message: str = "Invalid backup file format"):
+        super().__init__(message)
 
 
 class OffsetNotFoundError(DecryptionError):
-    """Raised when the correct offsets for decryption cannot be found."""
+    """Raised when the correct offsets for decryption cannot be found.
 
-    pass
+    This happens when:
+    - The backup file uses unknown IV and database start offsets
+    - Brute force offset detection fails
+    - The file structure doesn't match any known patterns
+
+    Consider reporting new offset patterns to help improve the tool.
+    """
+
+    def __init__(self, message: str = "Could not determine correct decryption offsets"):
+        super().__init__(message)
 
 
 class BruteForceInterrupted(DecryptionError):
-    """Raised when brute force decryption is interrupted by the user."""
+    """Raised when brute force decryption is interrupted by the user.
 
-    pass
+    This is a normal exception that occurs when the user presses Ctrl+C
+    during the brute force offset detection process.
+    """
+
+    def __init__(self, message: str = "Brute force decryption was interrupted by user"):
+        super().__init__(message)
 
 
 def _derive_main_enc_key(key_stream: bytes) -> Tuple[bytes, bytes]:

@@ -8,8 +8,8 @@ import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
+from queue import Empty, Full, Queue
 from typing import Any, Dict, List, Optional, Tuple, Union
-from queue import Queue, Empty, Full
 
 from .logging_config import get_logger, get_performance_logger
 
@@ -60,19 +60,32 @@ class SQLiteConnectionPool:
         # Apply SQLite performance optimizations
         cursor = conn.cursor()
 
-        # Enable WAL mode for better concurrent access
-        cursor.execute("PRAGMA journal_mode=WAL")
+        # Enable WAL mode for better concurrent access, with fallback
+        try:
+            cursor.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.OperationalError as e:
+            if "database is locked" in str(e):
+                logger.warning(
+                    f"Cannot enable WAL mode for {self.database_path}, using default journal mode"
+                )
+                # Continue without WAL mode
+            else:
+                raise
 
         # Optimize cache and memory settings
-        cursor.execute("PRAGMA cache_size=10000")  # 10MB cache
-        cursor.execute("PRAGMA temp_store=MEMORY")
-        cursor.execute("PRAGMA mmap_size=268435456")  # 256MB memory mapping
-
-        # Optimize synchronization for performance
-        cursor.execute("PRAGMA synchronous=NORMAL")
-
-        # Enable query planner optimization
-        cursor.execute("PRAGMA optimize")
+        try:
+            cursor.execute("PRAGMA cache_size=10000")  # 10MB cache
+            cursor.execute("PRAGMA temp_store=MEMORY")
+            cursor.execute("PRAGMA mmap_size=268435456")  # 256MB memory mapping
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute("PRAGMA optimize")
+        except sqlite3.OperationalError as e:
+            if "database is locked" in str(e):
+                logger.warning(
+                    f"Cannot apply optimization pragmas for {self.database_path}, using defaults"
+                )
+            else:
+                raise
 
         cursor.close()
         return conn
@@ -502,10 +515,16 @@ def optimize_database_schema(connection: sqlite3.Connection, platform: str) -> N
 
     # Update table statistics
     cursor = connection.cursor()
-    cursor.execute("ANALYZE")
-
-    # Optimize database structure
-    cursor.execute("PRAGMA optimize")
+    try:
+        cursor.execute("ANALYZE")
+        cursor.execute("PRAGMA optimize")
+    except sqlite3.OperationalError as e:
+        if "database is locked" in str(e):
+            logger.warning(
+                "Cannot run database analysis/optimization, database is locked"
+            )
+        else:
+            raise
 
     connection.commit()
     logger.info("Database optimization completed")

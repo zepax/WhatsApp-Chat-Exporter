@@ -122,7 +122,13 @@
       "Bash(git config:*)",
       "Bash(poetry check:*)",
       "Bash(git merge-tree:*)",
-      "Bash(git cherry-pick:*)"
+      "Bash(git cherry-pick:*)",
+      "Bash(echo)",
+      "Bash(git fsck:*)",
+      "Bash(poetry run black:*)",
+      "Bash(./run_advanced_analyzer.sh:*)",
+      "Bash(cp:*)",
+      "Bash(PYTHONPATH=. python -m Whatsapp_Chat_Exporter -i -d _review_folder/backup/7c7fba66680ef796b916b067077cc246adacf01d -m _review_folder/media/Media -o _review_folder/output/ios_test_specific -v)"
     ],
     "deny": []
   }

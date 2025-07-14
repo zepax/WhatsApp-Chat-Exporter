@@ -3,10 +3,10 @@ Query optimization utilities to eliminate N+1 problems and improve database perf
 """
 
 import sqlite3
-from typing import Dict, List, Optional, Any, Set
+from typing import Any, Dict, List, Optional, Set
 
-from .logging_config import get_logger, get_performance_logger
 from .database_optimizer import optimized_db_connection
+from .logging_config import get_logger, get_performance_logger
 
 logger = get_logger(__name__)
 perf_logger = get_performance_logger()
@@ -14,18 +14,20 @@ perf_logger = get_performance_logger()
 
 class ChatDataCache:
     """Optimized cache for chat data to eliminate N+1 queries."""
-    
+
     def __init__(self):
         """Initialize the cache."""
         self._chat_names: Dict[str, str] = {}
         self._chat_subjects: Dict[str, str] = {}
         self._chat_metadata: Dict[str, Dict[str, Any]] = {}
         self._loaded_contacts: Set[str] = set()
-        
-    def preload_chat_data(self, db_path: str, jid_list: List[str], platform: str = "android") -> None:
+
+    def preload_chat_data(
+        self, db_path: str, jid_list: List[str], platform: str = "android"
+    ) -> None:
         """
         Preload chat data for a list of JIDs to avoid N+1 queries.
-        
+
         Args:
             db_path: Database path
             jid_list: List of JIDs to preload
@@ -33,46 +35,48 @@ class ChatDataCache:
         """
         if not jid_list:
             return
-            
+
         logger.info(f"Preloading chat data for {len(jid_list)} chats")
-        
+
         with optimized_db_connection(db_path) as conn:
             cursor = conn.cursor()
-            
+
             if platform == "android":
                 self._preload_android_chat_data(cursor, jid_list)
             elif platform == "ios":
                 self._preload_ios_chat_data(cursor, jid_list)
-                
+
         perf_logger.info(
             "Chat data preloaded",
             extra={
                 "jid_count": len(jid_list),
                 "platform": platform,
                 "cached_names": len(self._chat_names),
-                "cached_subjects": len(self._chat_subjects)
-            }
+                "cached_subjects": len(self._chat_subjects),
+            },
         )
-    
-    def _preload_android_chat_data(self, cursor: sqlite3.Cursor, jid_list: List[str]) -> None:
+
+    def _preload_android_chat_data(
+        self, cursor: sqlite3.Cursor, jid_list: List[str]
+    ) -> None:
         """Preload Android chat data."""
         # Create placeholders for IN clause
-        placeholders = ','.join('?' * len(jid_list))
-        
+        placeholders = ",".join("?" * len(jid_list))
+
         # Load contact names and display names
         contact_query = f"""
             SELECT jid, COALESCE(display_name, wa_name) as display_name, status
-            FROM wa_contacts 
+            FROM wa_contacts
             WHERE jid IN ({placeholders})
         """
         cursor.execute(contact_query, jid_list)
-        
+
         for row in cursor.fetchall():
-            jid = row['jid']
-            self._chat_names[jid] = row['display_name'] or jid
-            if row['status']:
-                self._chat_metadata[jid] = {'status': row['status']}
-        
+            jid = row["jid"]
+            self._chat_names[jid] = row["display_name"] or jid
+            if row["status"]:
+                self._chat_metadata[jid] = {"status": row["status"]}
+
         # Load chat subjects from chat table
         chat_query = f"""
             SELECT jid.raw_string, chat.subject
@@ -83,49 +87,53 @@ class ChatDataCache:
         try:
             cursor.execute(chat_query, jid_list)
             for row in cursor.fetchall():
-                jid = row['raw_string'] 
-                if row['subject']:
-                    self._chat_subjects[jid] = row['subject']
+                jid = row["raw_string"]
+                if row["subject"]:
+                    self._chat_subjects[jid] = row["subject"]
         except sqlite3.OperationalError:
             # Fallback for older schema
             pass
-    
-    def _preload_ios_chat_data(self, cursor: sqlite3.Cursor, jid_list: List[str]) -> None:
+
+    def _preload_ios_chat_data(
+        self, cursor: sqlite3.Cursor, jid_list: List[str]
+    ) -> None:
         """Preload iOS chat data."""
-        placeholders = ','.join('?' * len(jid_list))
-        
+        placeholders = ",".join("?" * len(jid_list))
+
         # Load contact data from iOS schema
         contact_query = f"""
-            SELECT DISTINCT 
+            SELECT DISTINCT
                 ZWACHATSESSION.ZCONTACTJID,
                 ZWACHATSESSION.ZPARTNERNAME,
                 ZWAPROFILEPUSHNAME.ZPUSHNAME
             FROM ZWACHATSESSION
-            LEFT JOIN ZWAPROFILEPUSHNAME 
+            LEFT JOIN ZWAPROFILEPUSHNAME
                 ON ZWACHATSESSION.ZCONTACTJID = ZWAPROFILEPUSHNAME.ZJID
             WHERE ZWACHATSESSION.ZCONTACTJID IN ({placeholders})
         """
         cursor.execute(contact_query, jid_list)
-        
+
         for row in cursor.fetchall():
-            jid = row['ZCONTACTJID']
-            name = (row['ZPARTNERNAME'] or 
-                   row['ZPUSHNAME'] or 
-                   jid.split('@')[0] if '@' in jid else jid)
+            jid = row["ZCONTACTJID"]
+            name = (
+                row["ZPARTNERNAME"] or row["ZPUSHNAME"] or jid.split("@")[0]
+                if "@" in jid
+                else jid
+            )
             self._chat_names[jid] = name
-    
+
     def get_chat_name(self, jid: str) -> Optional[str]:
         """Get cached chat name."""
         return self._chat_names.get(jid)
-    
+
     def get_chat_subject(self, jid: str) -> Optional[str]:
         """Get cached chat subject."""
         return self._chat_subjects.get(jid)
-    
+
     def get_chat_metadata(self, jid: str) -> Dict[str, Any]:
         """Get cached chat metadata."""
         return self._chat_metadata.get(jid, {})
-    
+
     def clear(self) -> None:
         """Clear all cached data."""
         self._chat_names.clear()
@@ -136,26 +144,27 @@ class ChatDataCache:
 
 class MessageQueryOptimizer:
     """Optimized message queries to reduce database roundtrips."""
-    
+
     @staticmethod
-    def get_optimized_messages_cursor(db_path: str, filter_empty, filter_date, filter_chat, 
-                                    platform: str = "android") -> sqlite3.Cursor:
+    def get_optimized_messages_cursor(
+        db_path: str, filter_empty, filter_date, filter_chat, platform: str = "android"
+    ) -> sqlite3.Cursor:
         """
         Get an optimized cursor for message retrieval with minimal queries.
-        
+
         Args:
             db_path: Database path
             filter_empty: Empty message filter
             filter_date: Date filter
             filter_chat: Chat filter
             platform: Platform type
-            
+
         Returns:
             Optimized cursor with pre-joined data
         """
         with optimized_db_connection(db_path) as conn:
             cursor = conn.cursor()
-            
+
             if platform == "android":
                 return MessageQueryOptimizer._get_android_optimized_cursor(
                     cursor, filter_empty, filter_date, filter_chat
@@ -164,31 +173,37 @@ class MessageQueryOptimizer:
                 return MessageQueryOptimizer._get_ios_optimized_cursor(
                     cursor, filter_empty, filter_date, filter_chat
                 )
-    
+
     @staticmethod
-    def _get_android_optimized_cursor(cursor: sqlite3.Cursor, filter_empty, filter_date, filter_chat):
+    def _get_android_optimized_cursor(
+        cursor: sqlite3.Cursor, filter_empty, filter_date, filter_chat
+    ):
         """Get optimized Android message cursor with all required joins."""
         from .android_handler import get_chat_condition, get_cond_for_empty
-        
+
         # Build filters
         empty_filter = get_cond_for_empty(
             filter_empty, "messages.key_remote_jid", "messages.needs_push"
         )
         date_filter = f"AND messages.timestamp {filter_date}" if filter_date else ""
         include_filter = get_chat_condition(
-            filter_chat[0], True, 
+            filter_chat[0],
+            True,
             ["messages.key_remote_jid", "messages.remote_resource"],
-            "jid_global", "android"
+            "jid_global",
+            "android",
         )
         exclude_filter = get_chat_condition(
-            filter_chat[1], False,
-            ["messages.key_remote_jid", "messages.remote_resource"], 
-            "jid_global", "android"
+            filter_chat[1],
+            False,
+            ["messages.key_remote_jid", "messages.remote_resource"],
+            "jid_global",
+            "android",
         )
-        
+
         # Optimized query with all necessary joins to minimize later lookups
         query = f"""
-            SELECT 
+            SELECT
                 messages.key_remote_jid,
                 messages._id,
                 messages.key_from_me,
@@ -247,27 +262,31 @@ class MessageQueryOptimizer:
             GROUP BY messages._id
             ORDER BY messages.timestamp ASC
         """
-        
+
         cursor.execute(query)
         return cursor
-    
+
     @staticmethod
-    def _get_ios_optimized_cursor(cursor: sqlite3.Cursor, filter_empty, filter_date, filter_chat):
+    def _get_ios_optimized_cursor(
+        cursor: sqlite3.Cursor, filter_empty, filter_date, filter_chat
+    ):
         """Get optimized iOS message cursor with all required joins."""
         from .ios_handler import get_chat_condition
-        
-        # Build filters  
+
+        # Build filters
         chat_filter_include = get_chat_condition(
             filter_chat[0], True, ["ZWACHATSESSION.ZCONTACTJID"], "ios"
         )
         chat_filter_exclude = get_chat_condition(
-            filter_chat[1], False, ["ZWACHATSESSION.ZCONTACTJID"], "ios" 
+            filter_chat[1], False, ["ZWACHATSESSION.ZCONTACTJID"], "ios"
         )
-        date_filter = f"AND ZWAMESSAGE.ZMESSAGEDATE {filter_date}" if filter_date else ""
-        
+        date_filter = (
+            f"AND ZWAMESSAGE.ZMESSAGEDATE {filter_date}" if filter_date else ""
+        )
+
         # Optimized iOS query with preloaded contact data
         query = f"""
-            SELECT 
+            SELECT
                 ZWAMESSAGE.Z_PK,
                 ZWAMESSAGE.ZISFROMME,
                 ZWAMESSAGE.ZMESSAGEDATE,
@@ -297,39 +316,41 @@ class MessageQueryOptimizer:
                 {date_filter}
             ORDER BY ZWAMESSAGE.ZMESSAGEDATE ASC
         """
-        
+
         cursor.execute(query)
         return cursor
 
 
 class MediaQueryOptimizer:
     """Optimized media queries to reduce file system and database access."""
-    
+
     @staticmethod
-    def get_batch_media_info(db_path: str, message_ids: List[int], platform: str = "android") -> Dict[int, Dict[str, Any]]:
+    def get_batch_media_info(
+        db_path: str, message_ids: List[int], platform: str = "android"
+    ) -> Dict[int, Dict[str, Any]]:
         """
         Get media information for multiple messages in a single query.
-        
+
         Args:
             db_path: Database path
             message_ids: List of message IDs
             platform: Platform type
-            
+
         Returns:
             Dictionary mapping message ID to media info
         """
         if not message_ids:
             return {}
-            
+
         media_info = {}
-        
+
         with optimized_db_connection(db_path) as conn:
             cursor = conn.cursor()
-            placeholders = ','.join('?' * len(message_ids))
-            
+            placeholders = ",".join("?" * len(message_ids))
+
             if platform == "android":
                 query = f"""
-                    SELECT 
+                    SELECT
                         message_row_id,
                         file_path,
                         media_size,
@@ -340,19 +361,19 @@ class MediaQueryOptimizer:
                     WHERE message_row_id IN ({placeholders})
                 """
                 cursor.execute(query, message_ids)
-                
+
                 for row in cursor.fetchall():
-                    media_info[row['message_row_id']] = {
-                        'file_path': row['file_path'],
-                        'media_size': row['media_size'],
-                        'mime_type': row['mime_type'],
-                        'media_name': row['media_name'],
-                        'media_caption': row['media_caption']
+                    media_info[row["message_row_id"]] = {
+                        "file_path": row["file_path"],
+                        "media_size": row["media_size"],
+                        "mime_type": row["mime_type"],
+                        "media_name": row["media_name"],
+                        "media_caption": row["media_caption"],
                     }
-            
+
             elif platform == "ios":
                 query = f"""
-                    SELECT 
+                    SELECT
                         ZWAMESSAGE.Z_PK as message_id,
                         ZWAMEDIAITEM.ZMEDIALOCALPATH,
                         ZWAMEDIAITEM.ZMEDIAKEY,
@@ -363,49 +384,50 @@ class MediaQueryOptimizer:
                     WHERE ZWAMESSAGE.Z_PK IN ({placeholders})
                 """
                 cursor.execute(query, message_ids)
-                
+
                 for row in cursor.fetchall():
-                    media_info[row['message_id']] = {
-                        'file_path': row['ZMEDIALOCALPATH'],
-                        'media_key': row['ZMEDIAKEY'],
-                        'file_size': row['ZFILESIZE'],
-                        'title': row['ZTITLE']
+                    media_info[row["message_id"]] = {
+                        "file_path": row["ZMEDIALOCALPATH"],
+                        "media_key": row["ZMEDIAKEY"],
+                        "file_size": row["ZFILESIZE"],
+                        "title": row["ZTITLE"],
                     }
-        
+
         perf_logger.info(
             "Batch media info retrieved",
             extra={
                 "message_count": len(message_ids),
                 "media_found": len(media_info),
-                "platform": platform
-            }
+                "platform": platform,
+            },
         )
-        
+
         return media_info
 
 
 class VCardQueryOptimizer:
     """Optimized vCard processing to minimize file I/O."""
-    
+
     @staticmethod
-    def get_batch_vcard_data(db_path: str, filter_empty, filter_date, filter_chat, 
-                           platform: str = "android") -> List[Dict[str, Any]]:
+    def get_batch_vcard_data(
+        db_path: str, filter_empty, filter_date, filter_chat, platform: str = "android"
+    ) -> List[Dict[str, Any]]:
         """
         Get all vCard data in a single optimized query.
-        
+
         Args:
-            db_path: Database path  
+            db_path: Database path
             filter_empty: Empty filter
             filter_date: Date filter
             filter_chat: Chat filter
             platform: Platform type
-            
+
         Returns:
             List of vCard records with all necessary data
         """
         with optimized_db_connection(db_path) as conn:
             cursor = conn.cursor()
-            
+
             if platform == "android":
                 return VCardQueryOptimizer._get_android_vcard_batch(
                     cursor, filter_empty, filter_date, filter_chat
@@ -414,25 +436,35 @@ class VCardQueryOptimizer:
                 return VCardQueryOptimizer._get_ios_vcard_batch(
                     cursor, filter_empty, filter_date, filter_chat
                 )
-        
+
         return []
-    
+
     @staticmethod
-    def _get_android_vcard_batch(cursor: sqlite3.Cursor, filter_empty, filter_date, filter_chat):
+    def _get_android_vcard_batch(
+        cursor: sqlite3.Cursor, filter_empty, filter_date, filter_chat
+    ):
         """Get Android vCard data in batch."""
         from .android_handler import get_chat_condition, get_cond_for_empty
-        
+
         chat_filter_include = get_chat_condition(
-            filter_chat[0], True, ["key_remote_jid", "jid_group.raw_string"], "jid", "android"
+            filter_chat[0],
+            True,
+            ["key_remote_jid", "jid_group.raw_string"],
+            "jid",
+            "android",
         )
         chat_filter_exclude = get_chat_condition(
-            filter_chat[1], False, ["key_remote_jid", "jid_group.raw_string"], "jid", "android"
+            filter_chat[1],
+            False,
+            ["key_remote_jid", "jid_group.raw_string"],
+            "jid",
+            "android",
         )
         date_filter = f"AND message.timestamp {filter_date}" if filter_date else ""
         empty_filter = get_cond_for_empty(filter_empty, "key_remote_jid", "broadcast")
-        
+
         query = f"""
-            SELECT 
+            SELECT
                 message_vcard.message_row_id,
                 jid.raw_string as key_remote_jid,
                 message_vcard.vcard,
@@ -452,25 +484,29 @@ class VCardQueryOptimizer:
                 {chat_filter_exclude}
             ORDER BY message.chat_row_id ASC
         """
-        
+
         cursor.execute(query)
         return cursor.fetchall()
-    
+
     @staticmethod
-    def _get_ios_vcard_batch(cursor: sqlite3.Cursor, filter_empty, filter_date, filter_chat):
-        """Get iOS vCard data in batch.""" 
+    def _get_ios_vcard_batch(
+        cursor: sqlite3.Cursor, filter_empty, filter_date, filter_chat
+    ):
+        """Get iOS vCard data in batch."""
         from .ios_handler import get_chat_condition
-        
+
         chat_filter_include = get_chat_condition(
             filter_chat[0], True, ["ZWACHATSESSION.ZCONTACTJID"], "ios"
         )
         chat_filter_exclude = get_chat_condition(
             filter_chat[1], False, ["ZWACHATSESSION.ZCONTACTJID"], "ios"
         )
-        date_filter = f"AND ZWAMESSAGE.ZMESSAGEDATE {filter_date}" if filter_date else ""
-        
+        date_filter = (
+            f"AND ZWAMESSAGE.ZMESSAGEDATE {filter_date}" if filter_date else ""
+        )
+
         query = f"""
-            SELECT 
+            SELECT
                 ZWAMESSAGE.Z_PK as message_row_id,
                 ZWACHATSESSION.ZCONTACTJID as key_remote_jid,
                 ZWAMESSAGE.ZTEXT as vcard,
@@ -485,7 +521,7 @@ class VCardQueryOptimizer:
                 {date_filter}
             ORDER BY ZWAMESSAGE.ZCHATSESSION ASC
         """
-        
+
         cursor.execute(query)
         return cursor.fetchall()
 

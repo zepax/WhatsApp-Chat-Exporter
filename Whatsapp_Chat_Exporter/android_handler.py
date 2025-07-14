@@ -833,54 +833,81 @@ def _process_single_media(
 ):
     """Process a single media file."""
     base_dir = os.path.abspath(media_folder)
-    file_path = os.path.normpath(os.path.join(base_dir, content["file_path"]))
+    media_path = content["file_path"]
+    file_path = None
+    
+    # Try multiple search paths for Android media
+    search_paths = [
+        # Direct path in media folder
+        os.path.join(base_dir, media_path),
+        # Try with WhatsApp/Media subdirectory
+        os.path.join(base_dir, "WhatsApp", "Media", media_path),
+        # Try with Media subdirectory only
+        os.path.join(base_dir, "Media", media_path),
+        # Strip leading slash and try again
+        os.path.join(base_dir, media_path.lstrip('/\\')) if media_path.startswith(('/', '\\')) else None,
+        # Try direct path if absolute
+        media_path if os.path.isabs(media_path) else None
+    ]
+    
+    # Find first existing file
+    for search_path in filter(None, search_paths):
+        normalized_path = os.path.normpath(search_path)
+        if os.path.isfile(normalized_path):
+            file_path = normalized_path
+            break
+    
     current_chat = data.get_chat(content["key_remote_jid"])
     message = current_chat.get_message(content["message_row_id"])
     message.media = True
 
-    if not file_path.startswith(base_dir + os.sep):
+    # Check if file was found and validate security
+    if not file_path:
         message.data = "The media is missing"
         message.mime = "media"
         message.meta = True
         return
 
-    if os.path.isfile(file_path):
-        message.data = file_path
-
-        # Set mime type
-        if content["mime_type"] is None:
-            guess = mime.guess_type(file_path)[0]
-            if guess is not None:
-                message.mime = guess
-            else:
-                message.mime = "application/octet-stream"
-        else:
-            message.mime = content["mime_type"]
-
-        # Copy media to separate folder if needed
-        if separate_media:
-            if not current_chat.slug:
-                current_chat.slug = slugify(
-                    current_chat.name
-                    or message.sender
-                    or content["key_remote_jid"].split("@")[0],
-                    True,
-                )
-            chat_display_name = current_chat.slug
-
-            current_filename = os.path.basename(file_path)
-            new_folder = os.path.join(media_folder, "separated", chat_display_name)
-            Path(new_folder).mkdir(parents=True, exist_ok=True)
-            new_path = os.path.join(new_folder, current_filename)
-            if executor and tasks is not None:
-                tasks.append(executor.submit(shutil.copy2, file_path, new_path))
-            else:
-                shutil.copy2(file_path, new_path)
-            message.data = new_path
-    else:
+    if not file_path.startswith(base_dir + os.sep):
+        logger.warning(f"Media file outside base directory: {file_path}")
         message.data = "The media is missing"
         message.mime = "media"
         message.meta = True
+        return
+
+    # Process the found file
+    message.data = file_path
+
+    # Set mime type
+    if content["mime_type"] is None:
+        guess = mime.guess_type(file_path)[0]
+        if guess is not None:
+            message.mime = guess
+        else:
+            message.mime = "application/octet-stream"
+    else:
+        message.mime = content["mime_type"]
+
+    # Copy media to separate folder if needed
+    if separate_media:
+        if not current_chat.slug:
+            current_chat.slug = slugify(
+                current_chat.name
+                or message.sender
+                or content["key_remote_jid"].split("@")[0],
+                True,
+            )
+        chat_display_name = current_chat.slug
+
+        current_filename = os.path.basename(file_path)
+        new_folder = os.path.join(media_folder, "separated", chat_display_name)
+        Path(new_folder).mkdir(parents=True, exist_ok=True)
+        new_path = os.path.join(new_folder, current_filename)
+        if executor and tasks is not None:
+            tasks.append(executor.submit(shutil.copy2, file_path, new_path))
+        else:
+            shutil.copy2(file_path, new_path)
+        message.data = new_path
 
     # Handle thumbnail
     if content["thumbnail"] is not None:

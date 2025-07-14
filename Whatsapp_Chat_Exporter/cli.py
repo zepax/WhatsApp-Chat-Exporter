@@ -23,42 +23,50 @@ def export(ctx: typer.Context) -> None:
 
 @app.command()
 def clean(
-    input_json: str,
-    output_json: str,
-    remove_empty: bool = True,
-    deduplicate: bool = True,
+    input_file: str,
+    output_file: str = None,
+    remove_duplicates: bool = True,
+    duplicate_threshold: int = 60,
+    remove_system: bool = False,
+    anonymize_names: bool = False,
+    anonymize_phones: bool = False,
+    anonymize_emails: bool = False,
+    output_format: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    create_backup: bool = True,
+    verbose: bool = False,
 ) -> None:
-    """Clean chats from a JSON export."""
-    from .chat_cleaner import ChatCleaner
-    from .data_model import ChatCollection, ChatStore, Message
-    import json
+    """Clean and process WhatsApp chat exports with advanced features."""
+    from .chat_cleaner import ChatCleaner, CleaningConfig, parse_date
 
-    with open(input_json, "r") as f:
-        raw = json.load(f)
+    # Parse dates if provided
+    start_datetime = parse_date(start_date) if start_date else None
+    end_datetime = parse_date(end_date) if end_date else None
 
-    collection = ChatCollection()
-    for chat_id, chat_data in raw.items():
-        chat = ChatStore(chat_data.get("type", "android"), name=chat_data.get("name"))
-        for msg_id, msg_data in chat_data.get("messages", {}).items():
-            msg = Message(
-                from_me=msg_data.get("from_me", 0),
-                timestamp=msg_data.get("timestamp", 0),
-                time=msg_data.get("time", 0),
-                key_id=msg_data.get("key_id", 0),
-                received_timestamp=0,
-                read_timestamp=0,
-            )
-            msg.data = msg_data.get("data")
-            msg.media = msg_data.get("media", False)
-            msg.meta = msg_data.get("meta", False)
-            msg.sender = msg_data.get("sender")
-            chat.add_message(msg_id, msg)
-        collection.add_chat(chat_id, chat)
+    # Create configuration
+    config = CleaningConfig(
+        remove_duplicates=remove_duplicates,
+        duplicate_threshold_seconds=duplicate_threshold,
+        start_date=start_datetime,
+        end_date=end_datetime,
+        remove_system_messages=remove_system,
+        anonymize_names=anonymize_names,
+        anonymize_phones=anonymize_phones,
+        anonymize_emails=anonymize_emails,
+        create_backup=create_backup,
+        output_format=output_format or "json",
+    )
 
-    ChatCleaner.clean(collection, remove_empty, deduplicate)
+    # Initialize and run cleaner
+    cleaner = ChatCleaner(config)
+    success = cleaner.clean_file(input_file, output_file)
 
-    with open(output_json, "w") as f:
-        json.dump(collection.to_dict(), f, ensure_ascii=False, indent=2)
+    if verbose or not success:
+        cleaner.print_summary()
+
+    if not success:
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

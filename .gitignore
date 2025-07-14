@@ -15,6 +15,7 @@ export.log
 node_modules/
 venv/
 .venv/
+.ven/
 
 # Development tools and scripts (keep local)
 .dev/
