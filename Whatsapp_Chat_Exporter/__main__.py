@@ -337,7 +337,7 @@ def setup_argument_parser() -> ArgumentParser:
         "--template",
         dest="template",
         default=None,
-        help="Path to custom HTML template",
+        help="HTML template to use. Options: 'basic' (simple), 'optimized' (default, with search), or path to custom template",
     )
     html_group.add_argument(
         "--embedded",

@@ -176,7 +176,9 @@ def sanitize_except(html: str) -> Markup:
     Returns:
         A Markup object containing the sanitized HTML.
     """
-    return Markup(sanitize(html, tags=["br"]))
+    if html is None:
+        return Markup("")
+    return Markup(sanitize(str(html), tags=["br"]))
 
 
 def determine_day(last: int, current: int) -> Optional[datetime.date]:
@@ -635,9 +637,18 @@ def setup_template(
     Returns:
         jinja2.Template: The configured Jinja2 template object.
     """
-    if template is None or experimental:
+    if template is None:
         template_dir = os.path.dirname(__file__)
-        template_file = "whatsapp.html" if not experimental else template
+        template_file = "whatsapp_optimized.html"  # Use optimized template by default
+    elif template == "basic":
+        template_dir = os.path.dirname(__file__)
+        template_file = "whatsapp.html"  # Basic template available as option
+    elif template == "optimized":
+        template_dir = os.path.dirname(__file__)
+        template_file = "whatsapp_optimized.html"
+    elif experimental:
+        template_dir = os.path.dirname(__file__)
+        template_file = template if template else "whatsapp_new.html"
     else:
         template_dir = os.path.dirname(template)
         template_file = os.path.basename(template)
