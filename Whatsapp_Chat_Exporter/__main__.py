@@ -990,12 +990,16 @@ def process_calls(args, db, data: ChatCollection, filter_chat) -> None:
             ios_handler.calls(cdb, data, args.timezone_offset, filter_chat)
 
 
-def handle_media_directory(args, temp_dirs=None) -> None:
-    """Handle media directory copying or moving."""
+def handle_media_directory(args, temp_dirs=None) -> str | None:
+    """Handle media directory copying or moving.
+
+    Returns the final path to the media directory if processing occurred,
+    otherwise ``None``.
+    """
 
     if args.skip_media:
         logger.info("Skipping media directory as per --skip-media")
-        return
+        return None
     if os.path.isdir(args.media):
         dest_name = os.path.basename(args.media.rstrip(os.sep))
         media_path = os.path.join(args.output, dest_name)
@@ -1030,6 +1034,23 @@ def handle_media_directory(args, temp_dirs=None) -> None:
                     "Refusing to delete non-temporary media directory: %s",
                     args.media,
                 )
+
+        return media_path
+
+    return None
+
+
+def relativize_media_paths(data: ChatCollection, media_folder: str, output: str) -> None:
+    """Update media paths in ``data`` to be relative to ``media_folder``."""
+    base = os.path.abspath(media_folder)
+    base_rel = os.path.relpath(base, os.path.abspath(output)) + "/"
+    for chat in data.values():
+        chat.media_base = base_rel
+        for key, msg in chat.items():
+            if msg.media and isinstance(msg.data, str):
+                abs_path = os.path.abspath(msg.data)
+                if abs_path.startswith(base + os.sep):
+                    msg.data = os.path.relpath(abs_path, base)
 
 
 def create_output_files(args, data: ChatCollection, contact_store=None) -> None:
@@ -1481,11 +1502,14 @@ def run(args, parser) -> None:
         # Process messages, media, and calls
         process_messages(args, data)
 
+        # Handle media directory first so HTML links are correct
+        final_media = handle_media_directory(args, temp_dirs)
+        if final_media:
+            args.media = final_media
+        relativize_media_paths(data, args.media, args.output)
+
         # Create output files
         create_output_files(args, data, contact_store)
-
-        # Handle media directory
-        handle_media_directory(args, temp_dirs)
         report_resource_usage("After media handling")
 
     logger.info("Everything is done!")

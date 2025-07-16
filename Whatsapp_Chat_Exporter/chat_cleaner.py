@@ -28,6 +28,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
+from .data_model import ChatCollection
+
 try:
     from bs4 import BeautifulSoup
 
@@ -170,6 +172,42 @@ class ChatCleaner:
         self.email_pattern = re.compile(
             r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
         )
+
+    @staticmethod
+    def clean(collection: "ChatCollection") -> None:
+        """Simplified cleaner for :class:`ChatCollection`.
+
+        This helper removes empty messages, deduplicates by content and
+        timestamp, and drops chats left empty. It preserves order and
+        mutates ``collection`` in place.
+        """
+        for chat_id in list(collection.keys()):
+            chat = collection.get_chat(chat_id)
+            if chat is None:
+                continue
+
+            seen: set[tuple[str | None, float]] = set()
+            to_remove: list[str] = []
+            for key in list(chat.keys()):
+                msg = chat.get_message(key)
+                if msg is None:
+                    continue
+
+                if msg.data is None or msg.data == "":
+                    to_remove.append(key)
+                    continue
+
+                identifier = (str(msg.data), float(msg.timestamp))
+                if identifier in seen:
+                    to_remove.append(key)
+                else:
+                    seen.add(identifier)
+
+            for key in to_remove:
+                chat.delete_message(key)
+
+            if len(chat) == 0:
+                collection.remove_chat(chat_id)
 
     def setup_logging(self):
         """Setup logging configuration."""
